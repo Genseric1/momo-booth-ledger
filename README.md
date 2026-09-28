@@ -37,9 +37,20 @@ digits jump straight to the amount, and after a line is written the cursor comes
 back ready for the next one. `airtime` and `bundle` sit under it for the rarer
 lines.
 
-Above the page, one quiet line says where each wallet stands. Everything else —
-morning count, evening count, debts, statistics, export, settings — lives behind
-the single ☰ button, so the list of the day keeps the whole screen.
+A debt is written with the same pen: tap `debt`, and the number becomes a name
+while `in` / `out` become `owes us` / `we owe`. It is remembered at the counter,
+not in another screen.
+
+Balances are counted twice a day, so that is the only place they are shown. No
+running estimate sits beside the page — what stays is a reminder, for as long as
+a count is missing. Tapping the date opens a little calendar with a dot on every
+day that has lines; `⌕` looks a line up by number, amount, network or name. The
+page follows the real clock: past midnight, or when the phone is picked up the
+next morning, a fresh page opens on the right date.
+
+Everything else — morning count, evening count, debts, statistics, export,
+settings — lives behind the single ☰ button, so the list of the day keeps the
+whole screen.
 
 Entry speed is the success criterion. If writing a line here is slower than
 writing it in the notebook, agents go back to paper.

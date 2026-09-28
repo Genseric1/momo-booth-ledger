@@ -13,13 +13,24 @@ import * as store from '../store.js';
 const TYPE_OF = { in: 'cash_in', out: 'cash_out', air: 'airtime', bdl: 'bundle' };
 const LABEL = { in: 'in', out: 'out', air: 'airtime', bdl: 'bundle' };
 
+/* The same pen writes a debt: the number becomes a name, in/out become who
+   owes whom. Writing it where the lines are written is the whole point — a
+   debt is remembered at the counter, not in another screen. */
+async function accountFor(name) {
+  const found = store.state.debtAccounts.find((a) => a.name.toLowerCase() === name.trim().toLowerCase());
+  if (found) return found.account_id;
+  return (await store.addDebtAccount(name.trim())).account_id;
+}
+
 export function writerBar(ctx) {
   const d = ctx.draft;
+  const debtMode = () => d.mode === 'debt';
 
   const number = el('input.pen-num.num', {
     type: 'tel', inputmode: 'numeric', autocomplete: 'off', placeholder: '024 000 0000',
     value: groupNumber(d.number), 'aria-label': 'customer number',
     oninput: (e) => {
+      if (debtMode()) { d.name = e.target.value; return; }
       const { value, error } = acceptNumberInput(e.target.value, d.number);
       d.number = value;
       e.target.value = groupNumber(d.number);
@@ -42,23 +53,36 @@ export function writerBar(ctx) {
   const done = el('button.pen-ok', { text: '✓', title: 'write the line (Enter)', onclick: () => save() });
 
   const bar = el('div.pen', number, dirs, amount, done);
-  const row2 = el('div.pen-row2', net,
-    el('button.pen-more', { text: 'airtime', onclick: () => setDir(d.dir === 'air' ? 'in' : 'air') }),
-    el('button.pen-more', { text: 'bundle', onclick: () => setDir(d.dir === 'bdl' ? 'in' : 'bdl') }));
+  const more = el('button.pen-more', { text: 'airtime', onclick: () => setDir(d.dir === 'air' ? 'in' : 'air') });
+  const bundle = el('button.pen-more', { text: 'bundle', onclick: () => setDir(d.dir === 'bdl' ? 'in' : 'bdl') });
+  const debt = el('button.pen-more', { text: 'debt', onclick: () => setMode(debtMode() ? 'line' : 'debt') });
+  const row2 = el('div.pen-row2', net, more, bundle, debt);
   const wrap = el('div.writer', bar, row2);
 
   function paintDirs() {
     dirs.replaceChildren(
-      el(`button.in${d.dir === 'in' ? ' on' : ''}`, { text: 'in', onclick: () => setDir('in') }),
-      el(`button.out${d.dir === 'out' ? ' on' : ''}`, { text: 'out', onclick: () => setDir('out') }));
-    for (const b of row2.querySelectorAll('.pen-more')) {
-      b.classList.toggle('on', LABEL[d.dir] === b.textContent);
-    }
+      el(`button.in${d.dir === 'in' ? ' on' : ''}`, {
+        text: debtMode() ? 'owes us' : 'in', onclick: () => setDir('in') }),
+      el(`button.out${d.dir === 'out' ? ' on' : ''}`, {
+        text: debtMode() ? 'we owe' : 'out', onclick: () => setDir('out') }));
+    more.hidden = bundle.hidden = debtMode();
+    debt.classList.toggle('on', debtMode());
+    for (const b of [more, bundle]) b.classList.toggle('on', LABEL[d.dir] === b.textContent);
   }
   function paintNet() {
-    const w = d.wallet || walletFromNumber(d.number);
+    const w = d.wallet || (debtMode() ? 'CASH' : walletFromNumber(d.number));
     net.textContent = w ? WALLET_LABEL[w].toLowerCase() : 'network?';
     net.classList.toggle('guessed', !d.wallet && !!w);
+  }
+  function setMode(mode) {
+    d.mode = mode;
+    d.number = ''; d.name = ''; d.amount = ''; d.wallet = mode === 'debt' ? 'CASH' : null;
+    number.value = '';
+    number.type = mode === 'debt' ? 'text' : 'tel';
+    number.inputMode = mode === 'debt' ? 'text' : 'numeric';
+    number.placeholder = mode === 'debt' ? 'who owes, or who we owe' : '024 000 0000';
+    paintDirs(); paintNet();
+    number.focus();
   }
   function setDir(v) { d.dir = v; paintDirs(); if (!d.amount) amount.focus(); }
   function cycleNet() {
@@ -71,6 +95,20 @@ export function writerBar(ctx) {
   async function save() {
     const value = Number(d.amount || 0);
     if (!(value > 0)) { amount.focus(); return toast('Write the amount', { error: true }); }
+
+    if (debtMode()) {
+      if (!d.name?.trim()) { number.focus(); return toast('Who?', { error: true }); }
+      const owed = d.dir !== 'out';
+      await store.addDebtEntry({
+        account_id: await accountFor(d.name), day: ctx.date, wallet: d.wallet || 'CASH', amount: value,
+        kind: owed ? 'lend' : 'borrow', agent: ctx.agent || null,
+      });
+      toast(owed ? `${d.name.trim()} owes ${money(value, { dp: 0 })}` : `We owe ${d.name.trim()} ${money(value, { dp: 0 })}`);
+      setMode('debt');                        // ready for the next one, still in debt mode
+      ctx.refresh({ focus: false });
+      return;
+    }
+
     if (d.number && !isCompleteNumber(d.number)) {
       number.focus();
       return toast(`A number is 0 and ${NUMBER_LENGTH - 1} more digits — this one has ${d.number.length}`, { error: true });
@@ -87,11 +125,16 @@ export function writerBar(ctx) {
     ctx.refresh({ flash: true, focus: true });
   }
 
+  if (debtMode()) {
+    number.type = 'text'; number.inputMode = 'text';
+    number.placeholder = 'who owes, or who we owe';
+    number.value = d.name || '';
+  }
   paintDirs();
   paintNet();
   wrap.focusPen = () => number.focus();
   return wrap;
 }
 
-export const emptyDraft = () => ({ number: '', dir: 'in', amount: '', wallet: null });
+export const emptyDraft = () => ({ mode: 'line', number: '', name: '', dir: 'in', amount: '', wallet: null });
 export const unbindKeyboard = () => {};        // the native keyboard needs no binding

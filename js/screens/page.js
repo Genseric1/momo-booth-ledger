@@ -1,10 +1,10 @@
 /* ═══════════════ THE PAGE ═══════════════
-   What the agent looks at all day: the page of the notebook and, under it, the
-   totals block that writes itself. A line is written exactly as on paper —
-   the number, then in or out, then the amount.                               */
+   The lines of the day, and nothing beside them. The balances are counted twice
+   a day, in the morning and at night — so that is where they are shown. What
+   stays here is a reminder, for as long as a count is still missing.          */
 
-import { el, toast } from '../ui.js';
-import { WALLETS, WALLET_LABEL, money, addDays, displayNumber } from '../util.js';
+import { el } from '../ui.js';
+import { WALLET_LABEL, money, displayNumber, today } from '../util.js';
 import { dayReport, debtBalances } from '../calc.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
@@ -12,6 +12,7 @@ import { editLine } from './editline.js';
 
 const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'air', bundle: 'bdl' };
 const CLS = { cash_in: 'in', cash_out: 'out', airtime: 'other', bundle: 'other' };
+const DEBT_DIR = { lend: 'owes us', borrow: 'we owe', repay_received: 'paid back', repay_paid: 'we paid' };
 
 export function reportFor(date) {
   return dayReport({
@@ -25,91 +26,51 @@ export function reportFor(date) {
 export function pageScreen(ctx) {
   const rep = reportFor(ctx.date);
   const txs = store.dayTxs(ctx.date).slice().reverse();      // written downwards, like the page
+  const debts = store.dayDebtEntries(ctx.date).filter((e) => !e.cancelled);
   const mode = store.state.settings.numberStorage;
+  const write = sync.canWrite();
 
-  const lines = txs.length
-    ? txs.map((t) => el(`${sync.canWrite() ? 'button' : 'div'}.line.${CLS[t.type]}${t.cancelled ? '.off' : ''}`, {
-        onclick: sync.canWrite() ? () => editLine(t, ctx) : null,
-      },
-      el('div.who.num', { text: displayNumber(t.customer_number, mode) || '—' }),
-      el('div.net', { text: WALLET_LABEL[t.wallet].toLowerCase() }),
-      el('div.dir', { text: DIR[t.type] }),
-      el('div.amt.num', { text: money(t.amount, { dp: 0 }) })))
-    : [el('div.page-empty', {
-        text: sync.canWrite() ? 'Empty page. Write the first line below.' : 'Nothing written on this day.',
-      })];
+  const lines = txs.map((t) => el(`${write ? 'button' : 'div'}.line.${CLS[t.type]}${t.cancelled ? '.off' : ''}`, {
+    onclick: write ? () => editLine(t, ctx) : null,
+  },
+    el('div.who.num', { text: displayNumber(t.customer_number, mode) || '—' }),
+    el('div.net', { text: WALLET_LABEL[t.wallet].toLowerCase() }),
+    el('div.dir', { text: DIR[t.type] }),
+    el('div.amt.num', { text: money(t.amount, { dp: 0 }) })));
+
+  /* a debt written at the counter sits among the lines of its day, oldest first
+     like everything else on the page */
+  for (const e of debts.slice().reverse()) {
+    const name = store.state.debtAccounts.find((a) => a.account_id === e.account_id)?.name || 'someone';
+    lines.push(el(`${write ? 'button' : 'div'}.line.debt`, { onclick: write ? () => ctx.go('debts') : null },
+      el('div.who', { text: name }),
+      el('div.net', { text: WALLET_LABEL[e.wallet].toLowerCase() }),
+      el('div.dir', { text: DEBT_DIR[e.kind] }),
+      el('div.amt.num', { text: money(e.amount, { dp: 0 }) })));
+  }
 
   return el('div.book',
-    el('div', { class: 'left' },
-      strip(rep, ctx),
-      el('div.sheetpage', lines)),
-    el('div', { class: 'right' }, totalsBlock(rep, ctx)),
+    reminder(rep, ctx),
+    el('div.sheetpage', lines.length ? lines
+      : el('div.page-empty', { text: write ? 'Empty page. Write the first line below.' : 'Nothing written on this day.' })),
   );
 }
 
-/* One quiet line under the date: where each wallet stands right now. It is the
-   number the agent glances at before saying yes to a big cash-out. */
-function strip(rep, ctx) {
-  const cell = (k, v, big = false) => el(`div.cell${big ? '.tot' : ''}`,
-    el('div.k', { text: k }),
-    el('div.v.num', { text: money(v, { dp: 0 }) }));
-  const debts = rep.owed_to_us - rep.we_owe;
-  return el('div.strip', { onclick: () => ctx.go('evening'), title: 'the evening count' },
-    ...WALLETS.map((w) => cell(WALLET_LABEL[w], rep.hasOpening ? rep.expected[w] : rep.movement[w])),
-    debts ? cell('owed', debts) : null,
-    cell('total', rep.hasOpening ? rep.expectedCapital : 0, true));
-}
+/* One line, only while something is still owed to the day. */
+function reminder(rep, ctx) {
+  if (!sync.canWrite() || rep.closed) return null;
+  const isToday = ctx.date === today();
 
-/* The block written at the foot of the facing page, where there is room for it. */
-function totalsBlock(rep, ctx) {
-  const b = (w) => rep.hasOpening ? rep.expected[w] : rep.movement[w];
-  const bal = debtBalances(store.state.debtEntries.filter((e) => e.day <= ctx.date));
-  const owing = store.state.debtAccounts
-    .map((a) => ({ name: a.name, net: bal.perAccount.get(a.account_id)?.net || 0 }))
-    .filter((p) => Math.abs(p.net) > 0.004);
-  const row = (label, value, cls = '') => el('div.t',
-    el('div.k', { text: label }),
-    el(`div.v.num ${cls}`.trim(), { text: money(value, { dp: 0 }) }));
-
-  return el('div.totals',
-    ...WALLETS.map((w) => row(WALLET_LABEL[w], b(w))),
-    /* the people are part of the capital: without them the total would not
-       add up to the lines written above it */
-    ...owing.map((p) => row(p.name, p.net, p.net > 0 ? 'owed' : 'owing')),
-    el('div.sum',
-      el('div.k', { text: 'TOTAL' }),
-      el('div.v.num', { text: money(rep.hasOpening ? rep.expectedCapital : 0, { dp: 0 }) })),
-    message(rep, ctx),
-  );
-}
-
-function message(rep, ctx) {
   if (!rep.hasOpening) {
-    const prev = reportFor(addDays(ctx.date, -1));
-    return el('div.msg',
-      'No morning count yet. ',
-      prev.hasClosing
-        ? el('button', {
-            text: `Take yesterday's (${money(prev.realCapital, { dp: 0 })})`,
-            onclick: async () => {
-              await store.setOpening(ctx.date, prev.real, null);
-              toast('Morning taken from yesterday');
-              ctx.refresh();
-            },
-          })
-        : el('button', { text: 'Write the morning count', onclick: () => ctx.go('morning') }));
+    return el('button.remind', { onclick: () => ctx.go('morning') },
+      el('span', { text: isToday ? 'The morning count is not written yet' : 'This day has no morning count' }),
+      el('b', { text: 'write it' }));
   }
-  if (!rep.hasClosing) {
-    return el('div.msg', `${rep.txCount} line${rep.txCount === 1 ? '' : 's'} today. `,
-      el('button', { text: 'Count the evening', onclick: () => ctx.go('evening') }));
+  const late = !isToday || new Date().getHours() >= 16;
+  if (!rep.hasClosing && rep.txCount > 0 && late) {
+    return el('button.remind.evening', { onclick: () => ctx.go('evening') },
+      el('span', { text: isToday ? 'Time to count the evening' : 'This day was never counted at night' }),
+      el('b', { text: 'count it' }));
   }
-  const gap = rep.residualGap != null ? rep.residualGap : rep.totalGap;
-  if (Math.abs(gap) < 0.005) {
-    return el('div.msg', el('b', { text: 'The evening count is exact.' }), ' ',
-      el('button', { text: 'See it', onclick: () => ctx.go('evening') }));
-  }
-  return el('div.msg.warn',
-    el('b', { text: `${money(Math.abs(gap), { dp: 0 })} ${gap > 0 ? 'more' : 'missing'}` }),
-    ' against the page. ',
-    el('button', { text: 'Why', onclick: () => ctx.go('evening') }));
+  return null;
 }

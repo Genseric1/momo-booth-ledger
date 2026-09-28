@@ -93,7 +93,12 @@ export async function reload() {
   state.commissions = [...project(raw.commission_versions, 'commission_id').values()]
     .sort((a, b) => a.month.localeCompare(b.month));
 
-  for (const tx of state.txs) tx.customer_number = await decryptField(tx.customer_number);
+  /* the stored value stays on the row; the readable one is written beside it,
+     so a read taken before the PIN is entered cannot lose a number */
+  for (const tx of state.txs) {
+    tx.cipher_number = tx.customer_number;
+    tx.customer_number = await decryptField(tx.cipher_number);
+  }
   emit();
   return state;
 }

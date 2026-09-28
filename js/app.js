@@ -14,13 +14,16 @@ import { debtsScreen } from './screens/debts.js';
 import { statsScreen } from './screens/statistics.js';
 import { exportScreen, initialExportState } from './screens/exportpdf.js';
 import { settingsScreen } from './screens/settings.js';
+import { searchScreen } from './screens/search.js';
+import { openCalendar, closeCalendar } from './screens/calendar.js';
 
 const SCREENS = {
   page: pageScreen, menu: menuScreen, morning: morningScreen, evening: eveningScreen,
   debts: debtsScreen, stats: statsScreen, export: exportScreen, settings: settingsScreen,
+  search: searchScreen,
 };
 const TITLE = { menu: 'Menu', morning: 'Morning', evening: 'Evening', debts: 'Debts',
-  stats: 'Statistics', export: 'Export', settings: 'Settings' };
+  stats: 'Statistics', export: 'Export', settings: 'Settings', search: 'Search' };
 
 const ctx = {
   view: 'page',
@@ -30,8 +33,9 @@ const ctx = {
   statsPreset: 'week',
   statsCustom: {},
   exportState: initialExportState(),
-  go: (view) => { ctx.view = view; render(); scrollTop(); },
-  setDate: (d) => { ctx.date = d; render(); },
+  query: '',
+  go: (view) => { ctx.view = view; closeCalendar(); render(); scrollTop(); },
+  setDate: (d) => { ctx.date = d; closeCalendar(); render(); },
   refresh: (opts) => render(opts),
   setStatsPreset: (p) => { ctx.statsPreset = p; render(); },
   setStatsCustom: (c) => { ctx.statsCustom = c; render(); },
@@ -59,15 +63,20 @@ function bar(onPage) {
   const isToday = ctx.date === today();
   return el('div.bar',
     onPage ? null : el('button', { text: '‹', title: 'back', onclick: () => ctx.go('page') }),
-    el('div',
-      el('div.date', { text: onPage ? dayLabel(ctx.date) : TITLE[ctx.view] }),
-      onPage ? el('div.state', { text: sync.isViewer() ? 'read only' : isToday ? 'today' : 'another day' }) : null),
+    onPage
+      ? el('button.datebtn', { title: 'pick a day', onclick: () => openCalendar(ctx) },
+          el('div.date', { text: dayLabel(ctx.date) }),
+          el('div.state', { text: sync.isViewer() ? 'read only' : isToday ? clockLabel() : 'another day' }))
+      : el('div', el('div.date', { text: TITLE[ctx.view] })),
     el('div.sp'),
     onPage ? el('button', { text: '‹', title: 'day before', onclick: () => ctx.setDate(addDays(ctx.date, -1)) }) : null,
     onPage && !isToday ? el('button', { text: '›', title: 'day after', onclick: () => ctx.setDate(addDays(ctx.date, 1)) }) : null,
+    onPage ? el('button', { text: '⌕', title: 'search', onclick: () => ctx.go('search') }) : null,
     onPage ? el('button', { text: '☰', title: 'menu', onclick: () => ctx.go('menu') }) : null,
   );
 }
+
+const clockLabel = () => `today · ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
 
 function paintSync() {
   const s = sync.status;

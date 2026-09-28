@@ -33,6 +33,32 @@ input,select,textarea { font:inherit; color:inherit; }
 .bar .sp { flex:1; }
 .bar button { padding:5px 9px; font-size:19px; color:var(--ink2); border-radius:8px; }
 .bar button:active { background:var(--rule2); }
+.bar .datebtn { padding:2px 6px; text-align:left; }
+.bar .datebtn .date { font-size:17px; }
+
+/* ── the little calendar ── */
+.cal-bg { position:fixed; inset:0; z-index:50; background:rgba(22,48,107,.18); }
+.cal { position:absolute; top:calc(8px + env(safe-area-inset-top)); left:10px; width:272px;
+  background:var(--paper2); border:1px solid var(--rule); border-radius:14px; padding:10px;
+  box-shadow:0 10px 34px rgba(22,48,107,.22); }
+.cal-head { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
+.cal-head span { flex:1; text-align:center; font-weight:800; font-size:14.5px; }
+.cal-head button { width:32px; height:32px; border-radius:8px; font-size:17px; color:var(--ink2); }
+.cal-head button[disabled] { opacity:.25; }
+.cal-week { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:2px; }
+.cal-week span { text-align:center; font-size:10px; font-weight:700; color:var(--faint); }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.cal-grid button { height:34px; border-radius:8px; font-size:14px; font-weight:600; color:var(--ink);
+  position:relative; }
+.cal-grid button:active { background:var(--rule2); }
+.cal-grid button[disabled] { color:var(--rule); }
+.cal-grid button.has::after { content:''; position:absolute; bottom:4px; left:50%; transform:translateX(-50%);
+  width:4px; height:4px; border-radius:50%; background:var(--gold); }
+.cal-grid button.now { color:var(--gold); font-weight:800; }
+.cal-grid button.on { background:var(--ink); color:#fff; }
+.cal-grid button.on.has::after { background:#fff; }
+.cal-today { width:100%; margin-top:8px; padding:9px; border-radius:9px; border:1px solid var(--rule);
+  font-weight:700; font-size:14px; color:var(--ink2); }
 
 /* ── la page écrite ── */
 .sheetpage { position:relative; }
@@ -48,6 +74,9 @@ input,select,textarea { font:inherit; color:inherit; }
 .line.in .dir { color:var(--in); }
 .line.out .dir { color:var(--out); }
 .line.other .dir { color:var(--gold); }
+.line.debt { background:#FBF8EF; }
+.line.debt .dir { color:var(--gold); font-size:13px; }
+.line.debt .who { font-weight:700; }
 .line .amt { font-size:18px; font-weight:700; text-align:right; white-space:nowrap; min-width:74px; }
 .line.off .who, .line.off .amt, .line.off .dir { color:var(--faint); text-decoration:line-through;
   text-decoration-color:var(--red); text-decoration-thickness:2px; }
@@ -73,15 +102,13 @@ input,select,textarea { font:inherit; color:inherit; }
 .flash { animation:flash .8s ease-out; }
 @keyframes flash { from { background:#FFF4CE; } to { background:transparent; } }
 
-/* ── the strip: where each wallet stands, one glance, one line ── */
-.strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(0,1fr)); gap:6px; width:100%;
-  padding:7px 12px 8px; background:var(--paper2); border-bottom:1px solid var(--rule);
-  position:sticky; top:0; z-index:15; text-align:left; }
-.strip .cell { min-width:0; }
-.strip .k { font-size:9.5px; letter-spacing:.6px; text-transform:uppercase; color:var(--faint); font-weight:700; }
-.strip .v { font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.strip .tot .k { color:var(--gold); }
-.strip .tot .v { font-size:15px; }
+/* ── the reminder: only while a count is still missing ── */
+.remind { display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  padding:11px 14px 11px 26px; background:var(--goldsoft,#FDF7E6); border-bottom:1px solid var(--rule);
+  font-size:14px; color:#6B5210; }
+.remind span { flex:1; }
+.remind b { font-weight:800; text-decoration:underline; white-space:nowrap; }
+.remind.evening { background:#EFF4FC; color:#1C3C77; }
 
 /* ── the pen: one line, the phone's own keyboard ── */
 .writer { position:sticky; bottom:0; z-index:25; background:var(--paper2);
@@ -168,14 +195,7 @@ svg.spark { width:100%; height:110px; display:block; }
 .lock .field { width:100%; }
 
 /* ── sur PC : la page à gauche, les totaux sur la page d'en face ── */
-@media (min-width:900px) {
-  .book { display:grid; grid-template-columns:1fr 340px; gap:0; max-width:1100px; margin:0 auto;
-    align-items:start; }
-  .book > .left { border-right:1px solid var(--rule); min-height:calc(100vh - 52px); }
-  .book > .right { position:sticky; top:52px; padding:6px 0; }
-  .writer { max-width:760px; }
-  .totals { padding-top:10px; }
-}
+
 
 /* ── sections of a secondary page ── */
 .sec { margin-bottom:26px; }
@@ -200,11 +220,10 @@ svg.spark { width:100%; height:110px; display:block; }
 .sheet .hd .spacer { flex:1; }
 .x { width:36px; height:36px; border-radius:9px; font-size:16px; color:var(--faint); border:1px solid var(--rule); }
 
-/* the strip carries the phone; the facing page carries the full block on a PC */
-.book > .right { display:none; }
+/* on a PC the page is simply centred; there is no facing page to fill */
 @media (min-width:900px) {
-  .book > .right { display:block; }
-  .strip { display:none; }
+  .book, .writer { max-width:720px; margin-left:auto; margin-right:auto; }
+  .book > .left { border-right:none; }
 }
 
 /* ── the one chart ── */

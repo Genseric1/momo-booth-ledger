@@ -87,6 +87,9 @@ function renderUnlock(root, resolve, saved) {
     /* the numbers may have been written before this device joined the booth */
     const moved = await store.rekeyNumbers(pin);
     await unlock(pin, booth);
+    /* the first read happened while the app was still locked, so the numbers
+       came back empty: read them again now that the key exists */
+    await store.reload();
     if (moved) toast(`${moved} customer numbers carried over`);
     document.body.classList.remove('locked');
     resolve();
@@ -134,6 +137,7 @@ function renderSetup(root, resolve) {
       await DB.setMeta('pinHash', await pinHash(st.pin, booth));
       await store.saveSettings({ cryptoBoothId: booth });
       await unlock(st.pin, booth);
+      await store.reload();
       document.body.classList.remove('locked');
       toast('Booth ready');
       resolve();
