@@ -26,10 +26,24 @@ create table if not exists booth_members (
   primary key (booth_id, user_id)
 );
 
--- Helper used by every policy below.
+-- Helpers used by every policy below.
+-- Reading takes membership; writing takes a role that is allowed to write, so
+-- a boss can be given a 'viewer' account that cannot touch the register.
 create or replace function is_booth_member(b uuid) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from booth_members m where m.booth_id = b and m.user_id = auth.uid());
+$$;
+
+create or replace function can_write_booth(b uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from booth_members m
+    where m.booth_id = b and m.user_id = auth.uid() and m.role in ('manager', 'agent'));
+$$;
+
+create or replace function booth_role(b uuid) returns text
+language sql stable security definer set search_path = public as $$
+  select m.role from booth_members m where m.booth_id = b and m.user_id = auth.uid();
 $$;
 
 -- `server_at` is the pull cursor: assigned by the server, never by the client.
@@ -156,9 +170,9 @@ create policy booths_read on booths for select using (is_booth_member(id));
 drop policy if exists members_read on booth_members;
 create policy members_read on booth_members for select using (user_id = auth.uid() or is_booth_member(booth_id));
 
--- Members may read and insert versions of their own booth. Nothing may be
--- updated or deleted: corrections are new versions, which keeps the register
--- auditable and makes syncing conflict-free.
+-- Members read their own booth; only managers and agents write to it. Nothing
+-- may ever be updated or deleted: corrections are new versions, which keeps the
+-- register auditable and makes syncing conflict-free.
 do $$
 declare t text;
 begin
@@ -168,11 +182,24 @@ begin
     execute format('drop policy if exists %I_read on %I', t, t);
     execute format('create policy %I_read on %I for select using (is_booth_member(booth_id))', t, t);
     execute format('drop policy if exists %I_insert on %I', t, t);
-    execute format('create policy %I_insert on %I for insert with check (is_booth_member(booth_id))', t, t);
+    execute format('create policy %I_insert on %I for insert with check (can_write_booth(booth_id))', t, t);
   end loop;
 end $$;
 
--- ── first booth (edit the name, then add the manager) ─────────────────────
--- insert into booths (name) values ('PACSBI MoMo booth') returning id;
--- insert into booth_members (booth_id, user_id, role)
---   values ('<booth-id>', '<auth-user-id>', 'manager');
+-- ── setting up the booth ──────────────────────────────────────────────────
+-- 1. create the booth and keep the id it returns: it goes in js/config.js
+--    insert into booths (name) values ('PACSBI MoMo booth') returning id;
+--
+-- 2. create each account in Authentication -> Users (the manager does this;
+--    nobody signs themselves up), then give it a role in this booth:
+--    insert into booth_members (booth_id, user_id, role) values
+--      ('<booth-id>', '<auth-user-id>', 'manager'),   -- you
+--      ('<booth-id>', '<auth-user-id>', 'agent'),     -- the booth agent
+--      ('<booth-id>', '<auth-user-id>', 'viewer');    -- a boss, read only
+--
+-- 3. turn off public sign-ups so a link alone cannot create an account:
+--    Authentication -> Providers -> Email -> disable "Enable sign ups".
+--
+-- Who can do what:
+--   manager, agent -> read and write the register
+--   viewer         -> read only; every insert is refused by the policies above

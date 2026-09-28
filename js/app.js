@@ -82,8 +82,8 @@ async function boot() {
   /* In a sandboxed frame the getter itself can throw, so this stays guarded. */
   try { navigator.serviceWorker?.register('sw.js').catch(() => {}); } catch { /* no offline cache here */ }
   await store.init();
+  await sync.init();                 // loads the cached session — works offline
   await lockScreen(root);
-  await sync.init();
   store.onSyncNeeded(sync.sync);
   sync.subscribe(paintSync);
   sync.startAutoSync();

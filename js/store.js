@@ -5,7 +5,8 @@
 
 import * as DB from './db.js';
 import { uuid, today, dayKey, WALLETS } from './util.js';
-import { encryptField, decryptField } from './crypto.js';
+import { encryptField, decryptField, deriveKey, decryptWith, encryptWith } from './crypto.js';
+import { CONFIG, hasBackend } from './config.js';
 
 /* Newest version of each entity wins; the vid breaks ties so that every device
    projects the same state from the same rows. */
@@ -47,12 +48,19 @@ export const DEFAULT_SETTINGS = {
   supabaseUrl: '',
   supabaseKey: '',
   boothId: '',
+  cryptoBoothId: '',        // the booth id the stored numbers are encrypted under
 };
 
 export async function init() {
   await DB.open();
   const saved = await DB.getMeta('settings', null);
   state.settings = { ...DEFAULT_SETTINGS, ...(saved || {}) };
+  /* The deployment decides where the booth lives; a device cannot drift from it. */
+  if (hasBackend()) {
+    state.settings.supabaseUrl = CONFIG.supabaseUrl;
+    state.settings.supabaseKey = CONFIG.supabaseKey;
+    state.settings.boothId = CONFIG.boothId;
+  }
   if (!state.settings.device) {
     state.settings.device = `${navigator.platform || 'device'}-${uuid().slice(0, 4)}`;
     await DB.setMeta('settings', state.settings);
@@ -250,3 +258,28 @@ export async function reencryptNumbers() {
 }
 
 export const bootstrapDay = () => today();
+
+/* ═══ joining a booth after writing locally ═══
+   The encryption key is derived from the PIN *and* the booth id, so attaching
+   a device to a real booth changes the key. The numbers written before are
+   re-encrypted here, before anything tries to read them with the new key —
+   otherwise a day of work would come back blank.                            */
+export async function rekeyNumbers(pin) {
+  const from = state.settings.cryptoBoothId || 'local';
+  const to = state.settings.boothId || 'local';
+  if (from === to) return 0;
+
+  const [oldKey, newKey] = await Promise.all([deriveKey(pin, from), deriveKey(pin, to)]);
+  const raw = await DB.loadAll();
+  const current = [...project(raw.tx_versions, 'tx_id').values()];
+  const rows = [];
+  for (const tx of current) {
+    if (!tx.customer_number) continue;
+    const clear = await decryptWith(oldKey, tx.customer_number);
+    if (clear == null) continue;                    // not ours to re-encrypt; leave it alone
+    rows.push(stamp({ ...tx, customer_number: await encryptWith(newKey, clear) }));
+  }
+  if (rows.length) await DB.append('tx_versions', rows);
+  await saveSettings({ cryptoBoothId: to });
+  return rows.length;
+}

@@ -19,11 +19,14 @@ export const lock = () => { key = null; };
 
 /* The salt is the booth id, so the same PIN gives the same key on every device
    of the booth and a different key in another booth. */
-export async function unlock(pin, boothId = 'local') {
+export async function deriveKey(pin, boothId = 'local') {
   const material = await crypto.subtle.importKey('raw', enc.encode(String(pin)), 'PBKDF2', false, ['deriveKey']);
-  key = await crypto.subtle.deriveKey(
+  return crypto.subtle.deriveKey(
     { name: 'PBKDF2', salt: enc.encode('momo-booth:' + boothId), iterations: 150000, hash: 'SHA-256' },
     material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+export async function unlock(pin, boothId = 'local') {
+  key = await deriveKey(pin, boothId);
   return key;
 }
 
@@ -33,22 +36,24 @@ export async function pinHash(pin, boothId = 'local') {
   return b64(bits);
 }
 
-export async function encryptField(value) {
+export async function encryptWith(k, value) {
   if (value == null || value === '') return null;
-  if (!key) return String(value);                         // encryption off / no PIN set
+  if (!k) return String(value);                           // encryption off / no PIN set
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(String(value)));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, enc.encode(String(value)));
   return PREFIX + b64(iv) + ':' + b64(ct);
 }
+export const encryptField = (value) => encryptWith(key, value);
 
-export async function decryptField(value) {
+export async function decryptWith(k, value) {
   if (value == null || value === '') return null;
   const s = String(value);
   if (!s.startsWith(PREFIX)) return s;                    // stored in clear
-  if (!key) return null;                                  // locked: show nothing rather than guess
+  if (!k) return null;                                    // locked: show nothing rather than guess
   try {
     const [, , ivB, ctB] = s.split(':');
-    const out = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(ivB) }, key, unb64(ctB));
+    const out = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(ivB) }, k, unb64(ctB));
     return dec.decode(out);
   } catch { return null; }
 }
+export const decryptField = (value) => decryptWith(key, value);

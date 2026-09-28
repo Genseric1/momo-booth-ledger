@@ -12,7 +12,10 @@ import { STORE_NAMES } from './db.js';
 import { state, reload } from './store.js';
 
 export const status = { configured: false, online: navigator.onLine, signedIn: false,
-  busy: false, lastSync: null, lastError: null, pendingCount: 0, email: null };
+  busy: false, lastSync: null, lastError: null, pendingCount: 0, email: null, role: null };
+
+export const hasSession = () => !!session?.access_token;
+export const currentEmail = () => session?.user?.email || null;
 
 const listeners = new Set();
 export const subscribe = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
@@ -86,7 +89,15 @@ async function refresh() {
 
 /* ── push / pull ── */
 const STRIP = ['pending'];
-const clean = (row) => Object.fromEntries(Object.entries(row).filter(([k]) => !STRIP.includes(k)));
+/* Lines written before the booth was configured carry booth_id 'local'. They
+   are stamped with the real booth on their way up, so a day of work written
+   before the account existed is not stranded on the device. */
+const clean = (row) => {
+  const booth = state.settings?.boothId;
+  const out = Object.fromEntries(Object.entries(row).filter(([k]) => !STRIP.includes(k)));
+  if (booth && (!out.booth_id || out.booth_id === 'local')) out.booth_id = booth;
+  return out;
+};
 
 async function pushStore(store) {
   const rows = await DB.pending(store);

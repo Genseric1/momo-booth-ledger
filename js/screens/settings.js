@@ -5,6 +5,7 @@ import * as store from '../store.js';
 import * as sync from '../sync.js';
 import * as DB from '../db.js';
 import { pinHash, unlock } from '../crypto.js';
+import { hasBackend, needsAccount } from '../config.js';
 
 const NUMBER_MODES = [
   { value: 'masked', label: 'Masked' }, { value: 'last4', label: 'Last 4 only' },
@@ -47,18 +48,35 @@ export function settingsScreen(ctx) {
           tile('Waiting to send', String(st.pendingCount)),
           tile('Last sync', st.lastSync ? new Date(st.lastSync).toLocaleTimeString('en-GB') : '—')),
         st.lastError ? el('p.note', { text: st.lastError }) : null,
-        el('div.field', { style: { marginTop: '12px' } }, el('label', { text: 'Supabase project URL' }),
-          el('input', { value: s.supabaseUrl, placeholder: 'https://xxxx.supabase.co',
-            onchange: (e) => store.saveSettings({ supabaseUrl: e.target.value.trim() }).then(() => sync.init()).then(ctx.refresh) })),
-        el('div.field', el('label', { text: 'Anon key' }),
-          el('input', { value: s.supabaseKey, placeholder: 'eyJ…',
-            onchange: (e) => store.saveSettings({ supabaseKey: e.target.value.trim() }).then(() => sync.init()).then(ctx.refresh) })),
-        el('div.field', el('label', { text: 'Booth id' }),
-          el('input', { value: s.boothId, placeholder: 'uuid of the booth row',
-            onchange: (e) => store.saveSettings({ boothId: e.target.value.trim() }).then(ctx.refresh) })),
+        hasBackend()
+          ? el('div', { style: { marginTop: '12px' } },
+              el('p.note', { text: `Booth server: ${s.supabaseUrl}` }),
+              el('p.note', { text: `Booth id: ${s.boothId}` }),
+              el('p.note', { text: needsAccount()
+                ? 'An account is required to open this page.'
+                : 'An account is optional: the page opens without one.' }))
+          : el('div',
+              el('div.field', { style: { marginTop: '12px' } }, el('label', { text: 'Supabase project URL' }),
+                el('input', { value: s.supabaseUrl, placeholder: 'https://xxxx.supabase.co',
+                  onchange: (e) => store.saveSettings({ supabaseUrl: e.target.value.trim() }).then(() => sync.init()).then(ctx.refresh) })),
+              el('div.field', el('label', { text: 'Anon key' }),
+                el('input', { value: s.supabaseKey, placeholder: 'eyJ…',
+                  onchange: (e) => store.saveSettings({ supabaseKey: e.target.value.trim() }).then(() => sync.init()).then(ctx.refresh) })),
+              el('div.field', el('label', { text: 'Booth id' }),
+                el('input', { value: s.boothId, placeholder: 'uuid of the booth row',
+                  onchange: (e) => store.saveSettings({ boothId: e.target.value.trim() }).then(ctx.refresh) })),
+              el('p.note', { text: 'Set these once in js/config.js before publishing, and no agent ever has to type them.' })),
         el('div.r',
           st.signedIn
-            ? el('button.big.quiet', { text: 'Sign out', onclick: async () => { await sync.signOut(); ctx.refresh(); } })
+            ? el('button.big.quiet', { text: 'Sign out', onclick: async () => {
+                if (!await confirmSheet('Sign out',
+                  needsAccount()
+                    ? 'This page will ask for the account again, and that needs the network. Lines already written stay on the device.'
+                    : 'Lines already written stay on the device.',
+                  { danger: true, okLabel: 'Sign out' })) return;
+                await sync.signOut();
+                needsAccount() ? location.reload() : ctx.refresh();
+              } })
             : el('button.big', { text: 'Sign in', onclick: () => signInSheet(ctx) }),
           el('button.big.quiet', { text: st.busy ? 'Syncing…' : 'Sync now', onclick: async () => {
             const r = await sync.sync();

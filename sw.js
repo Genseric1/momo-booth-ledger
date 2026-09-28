@@ -2,11 +2,11 @@
    The shell is cached on install so the register opens with no network at all.
    Data never goes through here: it lives in IndexedDB and syncs separately.  */
 
-const CACHE = 'momo-ledger-v3';
+const CACHE = 'momo-ledger-v4';
 const SHELL = [
   '.', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/ui.js', 'js/util.js', 'js/calc.js', 'js/stats.js', 'js/db.js',
-  'js/store.js', 'js/sync.js', 'js/crypto.js', 'js/pdf.js', 'js/pdfcrypt.js', 'js/report.js',
+  'js/store.js', 'js/sync.js', 'js/crypto.js', 'js/config.js', 'js/pdf.js', 'js/pdfcrypt.js', 'js/report.js',
   'js/screens/page.js', 'js/screens/writer.js', 'js/screens/counts.js',
   'js/screens/menu.js', 'js/screens/editline.js', 'js/screens/debts.js',
   'js/screens/statistics.js', 'js/screens/exportpdf.js', 'js/screens/settings.js', 'js/screens/lock.js',
