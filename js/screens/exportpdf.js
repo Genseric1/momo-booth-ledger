@@ -27,8 +27,8 @@ export function exportScreen(ctx) {
   const count = store.state.txs.filter((t) => t.day >= range.start && t.day <= range.end
     && (st.options.cancelled || !t.cancelled)).length;
 
-  return el('div.wrap',
-    el('div', { style: { display: 'grid', gap: '14px' } },
+  return el('div.sheetview',
+    el('div',
       card('What to export', [
         chipRow(SCOPES, st.scope, (v) => { st.scope = v; ctx.refresh(); }),
         el('div.field', { style: { marginTop: '12px' } },
@@ -54,7 +54,7 @@ export function exportScreen(ctx) {
           el('span', { text: label }))),
         el('p.note', { text: st.options.fullNumbers
           ? 'Full numbers will be printed. Only do this if the person receiving the file is allowed to see them.'
-          : 'Customer numbers are masked (0244***123).' }),
+          : 'Customer numbers are masked (024 *** 3456).' }),
       ]),
 
       card('Password (optional)', [
@@ -67,8 +67,8 @@ export function exportScreen(ctx) {
       el('button.big', { text: 'Generate PDF', onclick: () => generate(st, range) }),
     ),
     el('div', card('What the file looks like', [
-      el('p.lead', { text: 'A register: date, time, line number, type, network, amount — the same columns as the notebook, so it can be handed over as a record.' }),
-      el('p.note', { style: { marginTop: '8px' }, text: 'With every box unchecked the file holds no balances, no statistics, and masked numbers.' }),
+      el('p.lead', { text: 'The page, printed: the date as a heading, then one line each — the number, the network, in or out, the amount. It can be handed over as a record.' }),
+      el('p.note', { style: { marginTop: '8px' }, text: 'With every box unchecked the file holds the lines and nothing else, numbers masked.' }),
       el('p.note', { style: { marginTop: '8px' }, text: 'It is generated on the device: nothing is uploaded to make it.' }),
     ])),
   );

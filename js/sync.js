@@ -111,7 +111,7 @@ async function refresh() {
 }
 
 /* ── push / pull ── */
-const STRIP = ['pending'];
+const STRIP = ['pending', 'cipher_number'];     // local helpers, not columns
 /* Lines written before the booth was configured carry booth_id 'local'. They
    are stamped with the real booth on their way up, so a day of work written
    before the account existed is not stranded on the device. */

@@ -128,15 +128,3 @@ export function card(title, bodyKids, headKids = []) {
     title ? el('div.seclabel', el('span', { text: title }), ...[headKids].flat()) : null,
     ...body);
 }
-
-/* Horizontal bars, used for weekday / hour / capital views. */
-export function bars(series, { format = (v) => v } = {}) {
-  const max = Math.max(1, ...series.map((s) => s.value));
-  const hot = Math.max(...series.map((s) => s.value));
-  return el('div',
-    el('div.bars', series.map((s) => el(`div.b${s.value === hot && hot > 0 ? '.hot' : ''}`, {
-      style: { height: `${Math.max(2, (s.value / max) * 100)}%` },
-      title: `${s.label}: ${format(s.value)}`,
-    }))),
-    el('div.barlabels', series.map((s) => el('span', { text: s.label }))));
-}

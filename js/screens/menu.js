@@ -32,7 +32,7 @@ export function menuScreen(ctx) {
         el('div.v', { text: ctx.agent || 'nobody' }),
         el('div.go', { text: '›' })) : null,
       row('Morning count', rep.hasOpening ? 'written' : 'not written yet', 'morning',
-        rep.hasOpening ? money(rep.expectedCapital - totalMoved(rep), { dp: 0 }) : null),
+        rep.hasOpening ? money(counted(rep.opening), { dp: 0 }) : null),
       row('Evening count', rep.hasClosing ? 'written' : 'not written yet', 'evening',
         rep.hasClosing ? money(rep.realCapital, { dp: 0 }) : null),
       row('Search', 'find a line by number, amount or name', 'search'),
@@ -43,7 +43,7 @@ export function menuScreen(ctx) {
     el('button.big.quiet', { text: 'Back to the page', style: { marginTop: '20px' }, onclick: () => ctx.go('page') }));
 }
 
-const totalMoved = (rep) => Object.values(rep.movement).reduce((t, v) => t + v, 0);
+const counted = (wallets) => Object.values(wallets).reduce((t, v) => t + v, 0);
 
 function pickAgent(ctx) {
   sheet('Who is writing', ({ close }) => [

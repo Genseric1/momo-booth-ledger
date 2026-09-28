@@ -122,7 +122,7 @@ export function writerBar(ctx) {
     });
     const keepDir = d.dir;
     Object.assign(d, emptyDraft(), { dir: keepDir });     // the next line is usually the same kind
-    ctx.refresh({ flash: true, focus: true });
+    ctx.refresh({ focus: true });
   }
 
   if (debtMode()) {

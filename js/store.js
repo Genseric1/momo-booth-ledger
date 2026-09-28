@@ -255,7 +255,14 @@ export async function reencryptNumbers() {
   const rows = [];
   for (const tx of state.txs) {
     if (!tx.customer_number) continue;
-    rows.push(stamp({ ...tx, customer_number: await encryptField(tx.customer_number) }));
+    /* built field by field: the in-memory row carries helpers (the ciphertext,
+       the sync flag) that are not columns of the register */
+    rows.push(stamp({
+      tx_id: tx.tx_id, day: tx.day, time: tx.time, type: tx.type, wallet: tx.wallet,
+      amount: tx.amount, sub_type: tx.sub_type, agent: tx.agent, note: tx.note,
+      cancelled: tx.cancelled, cancelled_at: tx.cancelled_at,
+      customer_number: await encryptField(tx.customer_number),
+    }));
   }
   if (rows.length) { await DB.append('tx_versions', rows); await reload(); queueSync(); }
   return rows.length;

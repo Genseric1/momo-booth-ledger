@@ -16,8 +16,8 @@ export function settingsScreen(ctx) {
   const s = store.state.settings;
   const st = sync.status;
 
-  return el('div.wrap',
-    el('div', { style: { display: 'grid', gap: '14px' } },
+  return el('div.sheetview',
+    el('div',
       card('Booth', [
         el('div.field', el('label', { text: 'Booth name' }),
           el('input', { value: s.boothName, onchange: (e) => store.saveSettings({ boothName: e.target.value || 'Booth' }).then(ctx.refresh) })),
@@ -88,7 +88,7 @@ export function settingsScreen(ctx) {
       ]),
     ),
 
-    el('div', { style: { display: 'grid', gap: '14px' } },
+    el('div',
       card('Booth PIN', [
         el('p.lead', { text: 'The PIN locks the app on this device and derives the key that encrypts customer numbers.' }),
         el('button.big.quiet', { text: 'Change PIN', style: { marginTop: '10px' }, onclick: () => changePinSheet(ctx) }),

@@ -44,7 +44,7 @@ const ctx = {
 const root = document.getElementById('app');
 const scrollTop = () => scrollTo({ top: 0 });
 
-function render({ flash = false, focus = false } = {}) {
+function render({ focus = false } = {}) {
   if (!store.state.ready) return;
   const onPage = ctx.view === 'page';
   clear(root);
@@ -52,7 +52,6 @@ function render({ flash = false, focus = false } = {}) {
   if (onPage && sync.canWrite()) {
     const pen = writerBar(ctx);
     root.append(pen);
-    if (flash) for (const t of root.querySelectorAll('.strip, .totals')) t.classList.add('flash');
     scrollTo({ top: document.body.scrollHeight });
     if (focus) pen.focusPen();            // keep writing without reaching for the field
   }

@@ -58,8 +58,10 @@ export function statsScreen(ctx) {
               text: `${change >= 0 ? '+' : ''}${(change * 100).toFixed(0)}% against the ${period.label} before`,
             })),
 
-      timeChart(series, { format: (v) => measure.money ? `GHS ${money(v, { dp: 0 })}` : String(v),
-        fromZero: measure.id !== 'capital' }),
+      series.some((p) => p.value !== 0)
+        ? timeChart(series, { format: (v) => measure.money ? `GHS ${money(v, { dp: 0 })}` : String(v),
+            fromZero: measure.id !== 'capital' })
+        : el('p.chart-empty', { text: 'Nothing written in this period yet.' }),
 
       numbers(st, period),
       networkTable(st, period),

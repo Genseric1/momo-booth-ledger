@@ -3,7 +3,7 @@
    the amounts, words look through the network, the agent and the note.        */
 
 import { el, fill } from '../ui.js';
-import { WALLET_LABEL, money, dayLabel, displayNumber, normalizeNumber, toP } from '../util.js';
+import { WALLET_LABEL, money, dayLabel, displayNumber, normalizeNumber } from '../util.js';
 import * as store from '../store.js';
 
 const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'air', bundle: 'bdl' };
@@ -24,7 +24,7 @@ export function searchScreen(ctx) {
     const hits = store.state.txs.filter((t) => {
       if (digits.length >= 2) {
         if ((t.customer_number || '').includes(digits)) return true;
-        if (String(toP(t.amount)).startsWith(digits) || String(t.amount).startsWith(digits)) return true;
+        if (String(t.amount).startsWith(digits)) return true;
       }
       return [WALLET_LABEL[t.wallet], DIR[t.type], t.agent, t.note, t.sub_type]
         .filter(Boolean).join(' ').toLowerCase().includes(term);
