@@ -7,6 +7,7 @@ import { el, toast } from '../ui.js';
 import { WALLETS, WALLET_LABEL, money, addDays, displayNumber } from '../util.js';
 import { dayReport, debtBalances } from '../calc.js';
 import * as store from '../store.js';
+import * as sync from '../sync.js';
 import { editLine } from './editline.js';
 
 const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'air', bundle: 'bdl' };
@@ -27,14 +28,16 @@ export function pageScreen(ctx) {
   const mode = store.state.settings.numberStorage;
 
   const lines = txs.length
-    ? txs.map((t) => el(`button.line.${CLS[t.type]}${t.cancelled ? '.off' : ''}`, {
-        onclick: () => editLine(t, ctx),
+    ? txs.map((t) => el(`${sync.canWrite() ? 'button' : 'div'}.line.${CLS[t.type]}${t.cancelled ? '.off' : ''}`, {
+        onclick: sync.canWrite() ? () => editLine(t, ctx) : null,
       },
       el('div.who.num', { text: displayNumber(t.customer_number, mode) || '—' }),
       el('div.net', { text: WALLET_LABEL[t.wallet].toLowerCase() }),
       el('div.dir', { text: DIR[t.type] }),
       el('div.amt.num', { text: money(t.amount, { dp: 0 }) })))
-    : [el('div.page-empty', { text: 'Empty page. Write the first line below.' })];
+    : [el('div.page-empty', {
+        text: sync.canWrite() ? 'Empty page. Write the first line below.' : 'Nothing written on this day.',
+      })];
 
   return el('div.book',
     el('div', { class: 'left' },

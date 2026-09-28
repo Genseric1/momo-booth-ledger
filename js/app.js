@@ -45,7 +45,7 @@ function render({ flash = false, focus = false } = {}) {
   const onPage = ctx.view === 'page';
   clear(root);
   root.append(bar(onPage), SCREENS[ctx.view](ctx));
-  if (onPage) {
+  if (onPage && sync.canWrite()) {
     const pen = writerBar(ctx);
     root.append(pen);
     if (flash) for (const t of root.querySelectorAll('.strip, .totals')) t.classList.add('flash');
@@ -61,7 +61,7 @@ function bar(onPage) {
     onPage ? null : el('button', { text: '‹', title: 'back', onclick: () => ctx.go('page') }),
     el('div',
       el('div.date', { text: onPage ? dayLabel(ctx.date) : TITLE[ctx.view] }),
-      onPage ? el('div.state', { text: isToday ? 'today' : 'another day' }) : null),
+      onPage ? el('div.state', { text: sync.isViewer() ? 'read only' : isToday ? 'today' : 'another day' }) : null),
     el('div.sp'),
     onPage ? el('button', { text: '‹', title: 'day before', onclick: () => ctx.setDate(addDays(ctx.date, -1)) }) : null,
     onPage && !isToday ? el('button', { text: '›', title: 'day after', onclick: () => ctx.setDate(addDays(ctx.date, 1)) }) : null,

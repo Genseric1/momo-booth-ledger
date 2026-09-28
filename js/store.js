@@ -198,7 +198,6 @@ export const uncancelTx = (tx_id) => editTx(tx_id, { cancelled: false, cancelled
 
 /* ── debt accounts and entries ── */
 export async function addDebtAccount(name) {
-  if (state.debtAccounts.length >= 4) throw new Error('v1 allows at most 4 debt accounts');
   return write('debt_account_versions', stamp({
     account_id: uuid(), name: name.trim(), archived: false, created_at: new Date().toISOString(),
   }));

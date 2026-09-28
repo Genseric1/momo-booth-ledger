@@ -1,177 +1,238 @@
-/* ═══════════════ STATISTICS (spec §7) ═══════════════ */
+/* ═══════════════ STATISTICS ═══════════════
+   One chart. You choose what it shows — the measure, the network, the period —
+   and the rest of the page is the handful of numbers that chart cannot say.   */
 
-import { el, card, tile, chipRow, bars, sheet, toast, fill, amountInput } from '../ui.js';
-import { NETWORKS, WALLET_LABEL, money, dayLabel, monthKey, maskNumber } from '../util.js';
-import { stats, rangeFor } from '../stats.js';
+import { el, fill, sheet, toast, amountInput } from '../ui.js';
+import { NETWORKS, WALLET_LABEL, money, dayLabel, dayKey, monthKey, parseDay, today, toP, toGhs, sum } from '../util.js';
+import { timeChart } from '../chart.js';
+import { dayReport, debtBalances } from '../calc.js';
 import * as store from '../store.js';
+import * as sync from '../sync.js';
 
-const PRESETS = [
-  { value: 'day', label: '1 day' }, { value: 'week', label: '7 days' },
-  { value: 'month', label: '30 days' }, { value: 'year', label: '12 months' },
-  { value: 'custom', label: 'Custom' },
+const MEASURES = [
+  { id: 'volume', label: 'Volume', money: true },
+  { id: 'in', label: 'In', money: true },
+  { id: 'out', label: 'Out', money: true },
+  { id: 'lines', label: 'Lines', money: false },
+  { id: 'capital', label: 'Capital', money: true },
+];
+const PERIODS = [
+  { id: 'week', label: '7 days', days: 7 },
+  { id: 'month', label: '30 days', days: 30 },
+  { id: 'year', label: '12 months', months: 12 },
 ];
 
 export function statsScreen(ctx) {
-  const dates = store.datesWithData();
-  const range = rangeFor(ctx.statsPreset, dates, ctx.statsCustom);
-  const s = stats({
-    range, txs: store.state.txs, days: store.state.days,
-    debtEntries: store.state.debtEntries, commissions: store.state.commissions,
-  });
-  const pct = (v) => `${(v * 100).toFixed(1)}%`;
+  const st = ctx.stats || (ctx.stats = { measure: 'volume', period: 'week', network: null });
+  const measure = MEASURES.find((m) => m.id === st.measure);
+  const period = PERIODS.find((p) => p.id === st.period);
+  const out = el('div.sheetview');
 
-  return el('div.wrap',
-    el('div', { class: 'full' }, card('Period', [
-      chipRow(PRESETS, ctx.statsPreset, (v) => ctx.setStatsPreset(v)),
-      ctx.statsPreset === 'custom' ? el('div', { style: { marginTop: '10px' } },
-        el('div', el('label', { text: 'From' }), el('input', { type: 'date', value: range.start,
-          onchange: (e) => ctx.setStatsCustom({ ...ctx.statsCustom, start: e.target.value }) })),
-        el('div', el('label', { text: 'To' }), el('input', { type: 'date', value: range.end,
-          onchange: (e) => ctx.setStatsCustom({ ...ctx.statsCustom, end: e.target.value }) }))) : null,
-      el('p.note', { style: { marginTop: '8px' },
-        text: `${dayLabel(range.start, { weekday: false })} → ${dayLabel(range.end, { weekday: false })} · the period ends on the last day with data · debts excluded` }),
-    ])),
+  const render = () => {
+    const series = build(st, period);
+    const previous = build(st, period, true);
+    const total = measure.id === 'capital' ? (series.at(-1)?.value ?? 0) : sum(series, (p) => p.value);
+    const before = measure.id === 'capital' ? (previous.at(-1)?.value ?? 0) : sum(previous, (p) => p.value);
+    const change = before ? (total - before) / Math.abs(before) : null;
+    const fmt = (v) => measure.money ? money(v, { dp: 0 }) : String(Math.round(v));
 
-    el('div', { style: { display: 'grid', gap: '14px' } },
-      card('Volume', [
-        el('div.rows',
-          tile('Transactions', String(s.count), `${s.perDayAverageCount.toFixed(1)} per day`),
-          tile('Cash in', money(s.cashIn), `${s.byType.cash_in.count} lines`),
-          tile('Cash out', money(s.cashOut), `${s.byType.cash_out.count} lines`),
-          tile('Airtime + bundles', money(s.byType.airtime.total + s.byType.bundle.total),
-            `${s.byType.airtime.count + s.byType.bundle.count} lines`)),
-        el('div.rows', { style: { marginTop: '10px' } },
-          tile('Total volume', money(s.volume), '', { accent: true }),
-          tile('Average', money(s.average)),
-          tile('Median', money(s.median)),
-          tile('Largest', money(s.largest))),
-      ]),
+    fill(out,
+      el('div.pick', PERIODS.map((p) => el(`button${st.period === p.id ? '.on' : ''}`, {
+        text: p.label, onclick: () => { st.period = p.id; render(); },
+      }))),
+      el('div.pick', { style: { marginTop: '8px' } }, MEASURES.map((m) => el(`button${st.measure === m.id ? '.on' : ''}`, {
+        text: m.label, onclick: () => { st.measure = m.id; render(); },
+      }))),
+      measure.id === 'capital' ? null
+        : el('div.pick', { style: { marginTop: '8px' } },
+            [{ id: null, label: 'All' }, ...NETWORKS.map((w) => ({ id: w, label: WALLET_LABEL[w] }))]
+              .map((n) => el(`button${st.network === n.id ? '.on' : ''}`, {
+                text: n.label, onclick: () => { st.network = n.id; render(); },
+              }))),
 
-      card('By network', [
-        el('div.scroll-x', el('table.tbl',
-          el('tr', el('th', { text: '' }), el('th', { text: 'Volume' }), el('th', { text: 'Net float' }),
-            el('th', { text: 'In/Out' }), el('th', { text: 'Volume share' }), el('th', { text: 'Count share' })),
-          ...NETWORKS.map((w) => {
-            const p = s.perNetwork[w];
-            return el('tr', el('td', { text: WALLET_LABEL[w] }),
-              el('td.num', { text: money(p.volume) }),
-              el('td.num', { class: p.netFloat >= 0 ? 'pos' : 'neg', text: money(p.netFloat, { sign: true }) }),
-              el('td.num', { text: p.inOutRatio === Infinity ? 'in only' : p.inOutRatio.toFixed(2) }),
-              el('td.num', { text: pct(p.shareVolume) }),
-              el('td.num', { text: pct(p.shareCount) }));
-          }))),
-        el('p.note', { style: { marginTop: '8px' },
-          text: 'Net float + means the network gained float (more cash-out than cash-in); - means it lost float and will need a top-up.' }),
-      ]),
+      el('div.hero',
+        el('div.k', { text: heroLabel(st, measure, period) }),
+        el('div.v.num', { text: measure.money ? `GHS ${fmt(total)}` : fmt(total) }),
+        change == null ? el('div.s', { text: 'no earlier period to compare with' })
+          : el(`div.s.${change >= 0 ? 'pos' : 'neg'}`, {
+              text: `${change >= 0 ? '+' : ''}${(change * 100).toFixed(0)}% against the ${period.label} before`,
+            })),
 
-      card('Busiest times', [
-        el('label', { text: 'By weekday' }),
-        bars(s.perWeekday.map((d) => ({ label: d.label, value: d.count }))),
-        el('label', { style: { marginTop: '14px' }, text: 'By hour' }),
-        bars(s.perHour.filter((h, i) => i >= 5 && i <= 22).map((h) => ({ label: h.label, value: h.count }))),
-        el('p.note', { style: { marginTop: '8px' },
-          text: `Busiest: ${s.busiestWeekday.label} · ${s.busiestHour.label}:00` }),
-      ]),
+      timeChart(series, { format: (v) => measure.money ? `GHS ${money(v, { dp: 0 })}` : String(v),
+        fromZero: measure.id !== 'capital' }),
 
-      card('Capital over time', [
-        s.capitalSeries.length > 1 ? spark(s.capitalSeries) : el('p.lead', { text: 'Needs at least two counted days.' }),
-        el('p.note', { style: { marginTop: '6px' }, text: 'Evening capital: counted closing when available, otherwise expected.' }),
-      ]),
-    ),
-
-    el('div', { style: { display: 'grid', gap: '14px' } },
-      card('Gaps', [
-        el('div.rows',
-          tile('Days counted', String(s.daysClosed)),
-          tile('Days with a gap', String(s.daysWithGap)),
-          tile('Unexplained total', money(s.cumulativeGap, { sign: true }), '', { cls: Math.abs(s.cumulativeGap) > 0.004 ? 'neg' : '' }),
-          tile('Extras estimated', money(s.cumulativeExtras))),
-        el('p.note', { style: { marginTop: '8px' },
-          text: 'The unexplained total is what is left after your own extras estimates. The app never decides whether a gap is an error or a fee.' }),
-      ]),
-      card('Cancelled lines', [
-        el('div.rows',
-          tile('Lines', String(s.cancelledCount)),
-          tile('Amount', money(s.cancelledTotal))),
-      ]),
-      commissionCard(ctx, s),
-      card('Most frequent customers', s.hasNumbers
-        ? el('div', s.customers.map((c) => el('div.r', { style: { padding: '6px 0', borderBottom: '1px solid var(--rule2)' } },
-            el('div', { style: { flex: '1' } }, el('div.v', {
-              text: store.state.settings.numberStorage === 'full' ? c.number : maskNumber(c.number) })),
-            el('p.note', { text: `${c.count} lines` }),
-            el('div.strong.num', { style: { marginLeft: '10px' }, text: money(c.total) }))))
-        : el('p.lead', { text: 'Customer numbers are not being stored, so this stays empty. You can change that in Settings.' })),
-    ),
-  );
+      numbers(st, period),
+      networkTable(st, period),
+      extras(ctx),
+    );
+  };
+  render();
+  return out;
 }
 
-/* Commissions are entered by hand once a month and only ever compared to volume. */
-function commissionCard(ctx, s) {
-  return card('Commission vs volume', [
-    s.commissionVsVolume.length
-      ? el('div.scroll-x', el('table.tbl',
-          el('tr', el('th', { text: 'Month' }), el('th', { text: 'Volume' }), el('th', { text: 'Commission' }), el('th', { text: 'Rate' })),
-          ...s.commissionVsVolume.map((m) => el('tr',
-            el('td', { text: m.month }),
-            el('td.num', { text: money(m.volume) }),
-            el('td.num', { text: money(m.commission) }),
-            el('td.num', { text: m.rate == null ? '—' : `${(m.rate * 100).toFixed(2)}%` })))))
-      : el('p.lead', { text: 'No commission recorded yet.' }),
-    el('button.big.quiet', { text: 'Record a commission', style: { marginTop: '10px' },
-      onclick: () => commissionSheet(ctx) }),
-    el('p.note', { style: { marginTop: '8px' },
-      text: 'Networks pay commissions into separate accounts at month end. They are never part of the daily total.' }),
-  ]);
+const heroLabel = (st, measure, period) => {
+  const where = st.network && measure.id !== 'capital' ? ` · ${WALLET_LABEL[st.network]}` : '';
+  const name = { in: 'Cash in', out: 'Cash out' }[measure.id] || measure.label;
+  return measure.id === 'capital' ? `Capital at the end${where}` : `${name} over ${period.label}${where}`;
+};
+
+/* ── the series behind the chart ── */
+function buckets(period, back = false) {
+  const dates = store.datesWithData();
+  const end = dates.at(-1) || today();
+  const out = [];
+  if (period.months) {
+    const d = parseDay(end);
+    for (let i = period.months - 1; i >= 0; i--) {
+      const m = new Date(d.getFullYear(), d.getMonth() - i - (back ? period.months : 0), 1);
+      const key = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
+      out.push({ key, label: m.toLocaleDateString('en-GB', { month: 'short' }),
+        sub: m.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), month: true });
+    }
+  } else {
+    const d = parseDay(end);
+    for (let i = period.days - 1; i >= 0; i--) {
+      const day = new Date(d);
+      day.setDate(d.getDate() - i - (back ? period.days : 0));
+      const key = dayKey(day);          // the local day, never the UTC one
+      out.push({ key, label: day.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+        sub: dayLabel(key), month: false });
+    }
+  }
+  return out;
+}
+
+function build(st, period, back = false) {
+  const inBucket = (b, day) => b.month ? monthKey(day) === b.key : day === b.key;
+  const raw = buckets(period, back).map((b) => {
+    let value = 0;
+    if (st.measure === 'capital') {
+      const days = store.datesWithData().filter((d) => inBucket(b, d));
+      const last = days.at(-1);
+      value = last ? capitalOn(last) : NaN;
+    } else {
+      const rows = store.state.txs.filter((t) => !t.cancelled && inBucket(b, t.day)
+        && (!st.network || t.wallet === st.network));
+      if (st.measure === 'lines') value = rows.length;
+      else {
+        const kept = st.measure === 'volume' ? rows
+          : rows.filter((t) => t.type === (st.measure === 'in' ? 'cash_in' : 'cash_out'));
+        value = toGhs(sum(kept, (t) => toP(t.amount)));
+      }
+    }
+    return { ...b, value };
+  });
+  /* capital is a level, not a flow: a day with no count carries the last one on */
+  return raw.map((p, i) => Number.isNaN(p.value)
+    ? { ...p, value: raw.slice(0, i).reverse().find((q) => !Number.isNaN(q.value))?.value ?? 0 }
+    : p);
+}
+
+function capitalOn(date) {
+  const rep = dayReport({
+    day: store.getDay(date) || { date },
+    txs: store.dayTxs(date),
+    dayDebts: store.dayDebtEntries(date),
+    carried: debtBalances(store.state.debtEntries.filter((e) => e.day < date)),
+  });
+  return rep.hasClosing ? rep.realCapital : rep.expectedCapital;
+}
+
+/* ── the numbers a line cannot say ── */
+function numbers(st, period) {
+  const days = buckets(period).map((b) => b.key);
+  const rows = store.state.txs.filter((t) => !t.cancelled
+    && (period.months ? days.includes(monthKey(t.day)) : days.includes(t.day))
+    && (!st.network || t.wallet === st.network));
+  const amounts = rows.map((t) => toP(t.amount)).sort((a, b) => a - b);
+  const line = (k, v, sub) => el('div.r', el('div', { text: k }, sub ? el('small', { text: sub }) : null),
+    el('div.sp'), el('div.v.num', { text: v }));
+
+  return el('div.rows', { style: { marginTop: '18px' } },
+    line('Lines', String(rows.length)),
+    line('Average line', amounts.length ? money(toGhs(Math.round(sum(amounts) / amounts.length)), { dp: 0 }) : '0'),
+    line('Biggest line', amounts.length ? money(toGhs(amounts.at(-1)), { dp: 0 }) : '0'));
+}
+
+function networkTable(st, period) {
+  const days = buckets(period).map((b) => b.key);
+  const keep = (t) => !t.cancelled && (period.months ? days.includes(monthKey(t.day)) : days.includes(t.day));
+  const rows = store.state.txs.filter(keep);
+  const totalP = sum(rows, (t) => toP(t.amount));
+
+  return el('div', { style: { marginTop: '22px' } },
+    el('div.seclabel', el('span', { text: 'By network' })),
+    el('div.rows', NETWORKS.map((w) => {
+      const mine = rows.filter((t) => t.wallet === w);
+      const volP = sum(mine, (t) => toP(t.amount));
+      const inP = sum(mine.filter((t) => t.type === 'cash_in'), (t) => toP(t.amount));
+      const outP = sum(mine.filter((t) => t.type === 'cash_out'), (t) => toP(t.amount));
+      const airP = sum(mine.filter((t) => t.type === 'airtime' || t.type === 'bundle'), (t) => toP(t.amount));
+      const net = toGhs(outP - inP - airP);
+      return el('div.r',
+        el('div', { text: WALLET_LABEL[w] },
+          el('small', { text: `${mine.length} lines · ${totalP ? Math.round((volP / totalP) * 100) : 0}% of the volume` })),
+        el('div.sp'),
+        el('div.v.num', { text: money(toGhs(volP), { dp: 0 }) }),
+        el('div.v.num', { class: net >= 0 ? 'pos' : 'neg', style: { width: '86px', textAlign: 'right' },
+          text: money(net, { sign: true, dp: 0 }) }));
+    })),
+    el('p.note', { text: 'The second number is the float the network gained or lost. Minus means it will need a top-up.' }));
+}
+
+/* ── gaps and commissions: four lines, not four sections ── */
+function extras(ctx) {
+  const closed = store.datesWithData().map((d) => capitalGap(d)).filter((g) => g != null);
+  const unexplained = toGhs(sum(closed, toP));
+  const withGap = closed.filter((g) => toP(g) !== 0).length;
+  const cancelled = store.state.txs.filter((t) => t.cancelled);
+  const month = monthKey(ctx.date);
+  const com = store.state.commissions.filter((c) => c.month === month);
+  const row = (k, sub, v, cls) => el('div.r', el('div', { text: k }, sub ? el('small', { text: sub }) : null),
+    el('div.sp'), el('div.v.num', { class: cls || '', text: v }));
+
+  return el('div', { style: { marginTop: '22px' } },
+    el('div.seclabel', el('span', { text: 'Checks' })),
+    el('div.rows',
+      row('Days with a gap', `${closed.length} evenings counted`, String(withGap)),
+      row('Unexplained, all together', 'after the extras you estimated',
+        money(unexplained, { sign: true, dp: 0 }), Math.abs(unexplained) > 0.004 ? 'neg' : ''),
+      row('Struck out lines', null, String(cancelled.length)),
+      el(sync.canWrite() ? 'button.r' : 'div.r', { onclick: sync.canWrite() ? () => commissionSheet(ctx) : null },
+        el('div', { text: `Commission ${month}` }, el('small', { text: 'paid by the networks, never in the total' })),
+        el('div.sp'),
+        el('div.v.num', { text: com.length ? money(toGhs(sum(com, (c) => toP(c.amount))), { dp: 0 }) : 'record' }),
+        sync.canWrite() ? el('div.go', { text: '›' }) : null)));
+}
+
+function capitalGap(date) {
+  const rep = dayReport({
+    day: store.getDay(date) || { date },
+    txs: store.dayTxs(date),
+    dayDebts: store.dayDebtEntries(date),
+    carried: debtBalances(store.state.debtEntries.filter((e) => e.day < date)),
+  });
+  if (!rep.hasClosing) return null;
+  return rep.residualGap != null ? rep.residualGap : rep.totalGap;
 }
 
 function commissionSheet(ctx) {
   const st = { month: monthKey(ctx.date), wallet: 'MTN', amount: '' };
-  sheet('Monthly commission', ({ body, close }) => {
-    const render = () => fill(body, 
+  sheet('Commission received', ({ body, close }) => {
+    const render = () => fill(body,
       el('div.field', el('label', { text: 'Month' }),
         el('input', { type: 'month', value: st.month, onchange: (e) => { st.month = e.target.value; } })),
       el('div.field', el('label', { text: 'Network' }),
-        chipRow(NETWORKS.map((w) => ({ value: w, label: WALLET_LABEL[w] })), st.wallet, (v) => { st.wallet = v; render(); }, { small: true })),
-      el('div.field', el('label', { text: 'Commission received (GHS)' }),
+        el('div.pick', NETWORKS.map((w) => el(`button${st.wallet === w ? '.on' : ''}`, {
+          text: WALLET_LABEL[w], onclick: () => { st.wallet = w; render(); } })))),
+      el('div.field', el('label', { text: 'Amount' }),
         amountInput({ value: st.amount, oninput: (v) => { st.amount = v; } })),
       el('button.big', { text: 'Save', onclick: async () => {
-        if (!(Number(st.amount) > 0)) return toast('Enter an amount', { error: true });
+        if (!(Number(st.amount) > 0)) return toast('Amount?', { error: true });
         await store.setCommission(st.month, st.wallet, Number(st.amount));
-        toast('Commission recorded'); ctx.refresh(); close();
-      } }),
-    );
+        toast('Commission recorded'); close(); ctx.refresh();
+      } }));
     render();
     return [];
   });
-}
-
-/* Inline sparkline: capital day by day. */
-function spark(series) {
-  const w = 600, h = 120, pad = 6;
-  const vals = series.map((p) => p.capital);
-  const min = Math.min(...vals), max = Math.max(...vals);
-  const span = max - min || 1;
-  const x = (i) => pad + (i * (w - pad * 2)) / Math.max(1, series.length - 1);
-  const y = (v) => h - pad - ((v - min) / span) * (h - pad * 2);
-  const line = series.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.capital).toFixed(1)}`).join(' ');
-  const area = `${line} L${x(series.length - 1).toFixed(1)},${h} L${x(0).toFixed(1)},${h} Z`;
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  svg.setAttribute('class', 'spark');
-  svg.setAttribute('preserveAspectRatio', 'none');
-  const path = (d, fill, stroke) => {
-    const p = document.createElementNS(ns, 'path');
-    p.setAttribute('d', d); p.setAttribute('fill', fill);
-    p.setAttribute('stroke', stroke); p.setAttribute('stroke-width', '2');
-    return p;
-  };
-  svg.append(path(area, 'rgba(227,193,91,.28)', 'none'), path(line, 'none', '#A8801F'));
-  return el('div',
-    svg,
-    el('div.r', { style: { justifyContent: 'space-between', marginTop: '4px' } },
-      el('span.note', { text: `${dayLabel(series[0].date, { weekday: false })} · ${money(series[0].capital)}` }),
-      el('span.note', { text: `${dayLabel(series[series.length - 1].date, { weekday: false })} · ${money(series[series.length - 1].capital)}` })),
-    el('p.note', { text: `low ${money(min)} · high ${money(max)}` }));
 }

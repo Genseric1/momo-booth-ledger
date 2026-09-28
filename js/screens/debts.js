@@ -1,136 +1,151 @@
-/* ═══════════════ DEBT ACCOUNTS (spec §6.6) ═══════════════
-   Up to four accounts. Direction is carried by the entries, not the account, so
-   the same neighbour can owe us today and lend to us tomorrow. Debts move the
-   till but never enter the statistics.                                       */
+/* ═══════════════ WHO OWES WHOM ═══════════════
+   A name, an amount, and which way it goes. It sits in the capital until it
+   comes back, then it leaves the list. Nothing else: no accounts to open, no
+   kinds of entry to choose from.                                             */
 
-import { el, card, sheet, toast, tile, chipRow, confirmSheet, fill, amountInput } from '../ui.js';
-import { WALLETS, WALLET_LABEL, KIND_LABEL, money, dayLabel, timeLabel, today } from '../util.js';
+import { el, fill, sheet, toast, amountInput, confirmSheet } from '../ui.js';
+import { WALLETS, WALLET_LABEL, money, today } from '../util.js';
 import { debtBalances } from '../calc.js';
 import * as store from '../store.js';
+import * as sync from '../sync.js';
 
-const KINDS = ['lend', 'borrow', 'repay_received', 'repay_paid'];
+/* One person = one open balance, whichever way it points. */
+function people() {
+  const bal = debtBalances(store.state.debtEntries);
+  return store.state.debtAccounts.map((a) => {
+    const b = bal.perAccount.get(a.account_id) || { owed_to_us: 0, we_owe: 0, net: 0 };
+    return { ...a, ...b, open: Math.abs(b.net) > 0.004 };
+  });
+}
 
 export function debtsScreen(ctx) {
-  const accounts = store.state.debtAccounts;
-  const bal = debtBalances(store.state.debtEntries);
-  const entries = store.state.debtEntries.slice(0, 60);
+  const open = people().filter((p) => p.open);
+  const owedToUs = open.filter((p) => p.net > 0).reduce((t, p) => t + p.net, 0);
+  const weOwe = open.filter((p) => p.net < 0).reduce((t, p) => t - p.net, 0);
+  const write = sync.canWrite();
 
-  return el('div.wrap',
-    el('div', { style: { display: 'grid', gap: '14px' } },
-      card('Debt accounts', [
-        el('div.rows',
-          tile('Owed to us', money(bal.owed_to_us), 'money out there'),
-          tile('We owe', money(bal.we_owe), 'to give back'),
-          tile('Net effect on capital', money(bal.owed_to_us - bal.we_owe, { sign: true }), '', { accent: true })),
-        accounts.length
-          ? el('div', { style: { marginTop: '12px' } }, accounts.map((a) => {
-              const b = bal.perAccount.get(a.account_id) || { owed_to_us: 0, we_owe: 0, net: 0 };
-              return el('div.r', { style: { marginBottom: '8px' } },
-                el('div.r',
-                  el('div', { style: { flex: '1' } },
-                    el('div.v', { text: a.name }),
-                    el('p.note', { text: `owes us ${money(b.owed_to_us)}  ·  we owe ${money(b.we_owe)}` })),
-                  el('div.v.num', { class: b.net >= 0 ? 'pos' : 'neg', text: money(b.net, { sign: true }) })),
-                el('div.r', { style: { marginTop: '8px' } },
-                  el('button.act', { text: 'New entry', onclick: () => entrySheet(ctx, a.account_id) }),
-                  el('button.act', { text: 'Rename', onclick: () => renameSheet(ctx, a) }),
-                  el('button.act', { text: 'Remove', onclick: async () => {
-                    if (!await confirmSheet('Remove account', `Hide ${a.name}? Its entries stay in the history and keep counting.`, { danger: true, okLabel: 'Remove' })) return;
-                    await store.archiveDebtAccount(a.account_id); ctx.refresh();
-                  } })));
-            }))
-          : el('p.lead', { style: { marginTop: '10px' }, text: 'No debt account yet. Add one for a neighbour, a colleague or a regular customer.' }),
-        accounts.length < 4
-          ? el('button.big.quiet', { text: '+ Add debt account', style: { marginTop: '10px' }, onclick: () => nameSheet(ctx) })
-          : el('p.note', { style: { marginTop: '10px' }, text: 'Four accounts is the limit in this version.' }),
-      ]),
-      card('Recent entries', entries.length ? el('div', entries.map((e) => {
-        const acc = accounts.find((a) => a.account_id === e.account_id);
-        return el('div.r', { style: { marginBottom: '8px' } },
-          el('div.r',
-            el('div', { style: { flex: '1' } },
-              el('div.v', { text: `${acc?.name || 'account'} — ${KIND_LABEL[e.kind]}` }),
-              el('p.note', { text: `${dayLabel(e.day, { weekday: false })} ${timeLabel(e.time)} · ${WALLET_LABEL[e.wallet]}${e.agent ? ' · ' + e.agent : ''}${e.note ? ' · ' + e.note : ''}` })),
-            el('div.v.num', { class: e.cancelled ? 'neg' : '', text: money(e.amount), style: e.cancelled ? { textDecoration: 'line-through' } : {} })),
-          !e.cancelled ? el('button.act', { text: 'Cancel entry', onclick: async () => {
-            if (!await confirmSheet('Cancel entry', 'Remove this entry from the balances? It stays visible.', { danger: true, okLabel: 'Cancel entry' })) return;
-            await store.cancelDebtEntry(e.entry_id); ctx.refresh();
-          } }) : null);
-      })) : el('p.lead', { text: 'Nothing yet.' })),
-    ),
-    el('div', card('How it counts', [
-      el('p.lead', { text: 'Lending takes money out of the till and puts it in "owed to us", so the capital does not change. A repayment does the opposite.' }),
-      el('p.note', { style: { marginTop: '8px' }, text: 'Debt entries are excluded from the statistics on purpose: they are not booth business.' }),
-    ])),
+  return el('div.sheetview',
+    el('div.hero',
+      el('div.k', { text: 'In the capital right now' }),
+      el('div.v.num', { text: money(owedToUs - weOwe, { sign: true, dp: 0 }) }),
+      el('div.s', { text: owedToUs || weOwe
+        ? `${money(owedToUs, { dp: 0 })} owed to us · ${money(weOwe, { dp: 0 })} we owe`
+        : 'nobody owes anybody' })),
+
+    open.length
+      ? el('div.rows', open.map((p) => el(write ? 'button.r' : 'div.r', {
+          onclick: write ? () => settleSheet(ctx, p) : null,
+        },
+        el('div', { text: p.name },
+          el('small', { text: p.net > 0 ? 'owes us' : 'we owe' })),
+        el('div.sp'),
+        el('div.v.num', { class: p.net > 0 ? 'pos' : 'neg', text: money(Math.abs(p.net), { dp: 0 }) }),
+        write ? el('div.go', { text: '›' }) : null)))
+      : el('p.lead', { style: { marginTop: '18px' }, text: 'Nothing outstanding.' }),
+
+    write ? el('div', { style: { marginTop: '20px' } },
+      el('button.big', { text: 'Someone owes us', onclick: () => addSheet(ctx, 'owed_to_us') }),
+      el('button.big.quiet', { text: 'We owe someone', style: { marginTop: '8px' },
+        onclick: () => addSheet(ctx, 'we_owe') })) : null,
+
+    el('p.note', { style: { marginTop: '18px' },
+      text: 'Lending takes the money out of the till and puts it here, so the capital does not move. When it comes back, the line leaves this page — the entries stay in the exported register.' }),
   );
 }
 
-function nameSheet(ctx) {
-  let name = '';
-  sheet('New debt account', ({ close }) => [
-    el('div.field', el('label', { text: 'Name' }),
-      el('input', { placeholder: 'e.g. Kwame next door', oninput: (e) => { name = e.target.value; } })),
-    el('button.big', { text: 'Add account', onclick: async () => {
-      if (!name.trim()) return toast('Enter a name', { error: true });
-      try { await store.addDebtAccount(name); } catch (e) { return toast(e.message, { error: true }); }
-      ctx.refresh(); close();
-    } }),
-  ]);
-}
-function renameSheet(ctx, a) {
-  let name = a.name;
-  sheet('Rename account', ({ close }) => [
-    el('div.field', el('label', { text: 'Name' }), el('input', { value: name, oninput: (e) => { name = e.target.value; } })),
-    el('button.big', { text: 'Save', onclick: async () => {
-      await store.editDebtAccount(a.account_id, { name: name.trim() || a.name }); ctx.refresh(); close();
-    } }),
-  ]);
+/* Adding: a name, an amount, and what it came out of. */
+function addSheet(ctx, direction) {
+  const st = { name: '', amount: '', wallet: 'CASH' };
+  const known = store.state.debtAccounts;
+  sheet(direction === 'owed_to_us' ? 'Someone owes us' : 'We owe someone', ({ body, close }) => {
+    const note = el('p.note');
+    const sayEffect = () => { note.textContent = effect(direction, st); };
+    const render = () => fill(body,
+      el('div.field',
+        el('label', { text: 'Who' }),
+        el('input', { value: st.name, placeholder: 'name', autocomplete: 'off',
+          oninput: (e) => { st.name = e.target.value; } }),
+        known.length ? el('div.pick', { style: { marginTop: '8px' } }, known.slice(0, 6).map((a) =>
+          el('button', { text: a.name, onclick: (e) => {
+            st.name = a.name;
+            e.target.closest('.field').querySelector('input').value = a.name;
+          } }))) : null),
+      el('div.field', el('label', { text: 'How much' }),
+        amountInput({ value: st.amount, oninput: (v) => { st.amount = v; sayEffect(); } })),
+      el('div.field',
+        el('label', { text: direction === 'owed_to_us' ? 'Taken out of' : 'Put into' }),
+        el('div.pick', WALLETS.map((w) => el(`button${st.wallet === w ? '.on' : ''}`, {
+          text: WALLET_LABEL[w], onclick: () => { st.wallet = w; render(); } })))),
+      note,
+      el('button.big', { text: 'Save', style: { marginTop: '10px' }, onclick: async () => {
+        if (!st.name.trim()) return toast('Who?', { error: true });
+        if (!(Number(st.amount) > 0)) return toast('How much?', { error: true });
+        const account_id = await accountFor(st.name.trim());
+        await store.addDebtEntry({
+          account_id, day: ctx.date || today(), wallet: st.wallet, amount: Number(st.amount),
+          kind: direction === 'owed_to_us' ? 'lend' : 'borrow', agent: ctx.agent || null,
+        });
+        toast('Written down'); close(); ctx.refresh();
+      } }));
+    render();
+    sayEffect();
+    return [];
+  });
 }
 
-export function entrySheet(ctx, account_id = null) {
-  const accounts = store.state.debtAccounts;
-  if (!accounts.length) return toast('Add a debt account first', { error: true });
-  const st = {
-    account_id: account_id || accounts[0].account_id,
-    kind: 'lend', wallet: 'CASH', amount: '', day: ctx.date || today(), note: '',
-    agent: store.state.settings.agents[0] || null,
-  };
-  sheet('Debt entry', ({ body, close }) => {
-    const render = () => fill(body, 
-      el('div.field', el('label', { text: 'Account' }),
-        chipRow(accounts.map((a) => ({ value: a.account_id, label: a.name })), st.account_id,
-          (v) => { st.account_id = v; render(); }, { small: true })),
-      el('div.field', el('label', { text: 'What happened' }),
-        chipRow(KINDS.map((k) => ({ value: k, label: KIND_LABEL[k] })), st.kind, (v) => { st.kind = v; render(); }, { small: true })),
-      el('div.field', el('label', { text: 'Amount (GHS)' }),
+/* Settling: the amount comes back, and when nothing is left the line goes. */
+function settleSheet(ctx, person) {
+  const owed = person.net > 0;
+  const st = { amount: String(Math.abs(person.net)), wallet: 'CASH' };
+  sheet(person.name, ({ body, close }) => {
+    const render = () => fill(body,
+      el('p.lead', { text: owed
+        ? `${person.name} owes ${money(Math.abs(person.net), { dp: 0 })}.`
+        : `We owe ${person.name} ${money(Math.abs(person.net), { dp: 0 })}.` }),
+      el('div.field', el('label', { text: owed ? 'Paid back' : 'We paid back' }),
         amountInput({ value: st.amount, oninput: (v) => { st.amount = v; } })),
-      el('div.field', el('label', { text: 'What moved' }),
-        chipRow(WALLETS.map((w) => ({ value: w, label: WALLET_LABEL[w] })), st.wallet, (v) => { st.wallet = v; render(); }, { small: true })),
-      el('div.field', el('label', { text: 'Date' }),
-        el('input', { type: 'date', value: st.day, max: today(), onchange: (e) => { st.day = e.target.value; } })),
-      store.state.settings.agents.length ? el('div.field', el('label', { text: 'Agent (optional)' }),
-        chipRow([{ value: null, label: '—' }, ...store.state.settings.agents], st.agent, (v) => { st.agent = v; render(); }, { small: true })) : null,
-      el('div.field', el('label', { text: 'Note (optional)' }),
-        el('input', { value: st.note, oninput: (e) => { st.note = e.target.value; } })),
-      el('p.note', { text: effectText(st) }),
-      el('button.big', { text: 'Save entry', style: { marginTop: '10px' }, onclick: async () => {
-        if (!(Number(st.amount) > 0)) return toast('Enter an amount', { error: true });
-        await store.addDebtEntry(st);
-        toast('Debt entry saved'); ctx.refresh(); close();
+      el('div.field', el('label', { text: owed ? 'Received into' : 'Paid out of' }),
+        el('div.pick', WALLETS.map((w) => el(`button${st.wallet === w ? '.on' : ''}`, {
+          text: WALLET_LABEL[w], onclick: () => { st.wallet = w; render(); } })))),
+      el('button.big', { text: 'Paid back', onclick: async () => {
+        const value = Number(st.amount);
+        if (!(value > 0)) return toast('How much?', { error: true });
+        if (value > Math.abs(person.net) + 0.004) return toast('That is more than is owed', { error: true });
+        await store.addDebtEntry({
+          account_id: person.account_id, day: ctx.date || today(), wallet: st.wallet, amount: value,
+          kind: owed ? 'repay_received' : 'repay_paid', agent: ctx.agent || null,
+        });
+        toast(value >= Math.abs(person.net) - 0.004 ? 'Settled' : 'Part paid back');
+        close(); ctx.refresh();
       } }),
-    );
+      el('button.big.warn', { text: 'Cancel this debt', style: { marginTop: '8px' }, onclick: async () => {
+        if (!await confirmSheet('Cancel the debt',
+          'Written down by mistake? The entries are struck out and the money goes back where it was.',
+          { danger: true, okLabel: 'Cancel it' })) return;
+        for (const e of store.state.debtEntries.filter((e) => e.account_id === person.account_id && !e.cancelled)) {
+          await store.cancelDebtEntry(e.entry_id);
+        }
+        toast('Cancelled'); close(); ctx.refresh();
+      } }));
     render();
     return [];
   });
 }
 
-function effectText(st) {
+/* The person is the account: the same name reuses the same one. */
+async function accountFor(name) {
+  const found = store.state.debtAccounts.find((a) => a.name.toLowerCase() === name.toLowerCase());
+  if (found) return found.account_id;
+  const created = await store.addDebtAccount(name);
+  return created.account_id;
+}
+
+function effect(direction, st) {
   const a = Number(st.amount || 0);
   const w = WALLET_LABEL[st.wallet];
-  switch (st.kind) {
-    case 'lend': return `${w} goes down by ${money(a)}, owed to us goes up by ${money(a)}. Capital unchanged.`;
-    case 'borrow': return `${w} goes up by ${money(a)}, we owe goes up by ${money(a)}. Capital unchanged.`;
-    case 'repay_received': return `${w} goes up by ${money(a)}, owed to us goes down by ${money(a)}.`;
-    default: return `${w} goes down by ${money(a)}, we owe goes down by ${money(a)}.`;
-  }
+  return direction === 'owed_to_us'
+    ? `${w} goes down by ${money(a, { dp: 0 })} and the same amount waits here. The capital does not move.`
+    : `${w} goes up by ${money(a, { dp: 0 })} and the same amount is owed. The capital does not move.`;
 }
+
+export { addSheet as entrySheet };

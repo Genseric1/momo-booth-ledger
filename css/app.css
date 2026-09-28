@@ -121,8 +121,9 @@ input,select,textarea { font:inherit; color:inherit; }
 .big.quiet { background:transparent; color:var(--ink); border:1.5px solid var(--rule); }
 .big.warn { background:transparent; color:var(--red); border:1.5px solid #EBC6C0; }
 .pick { display:flex; flex-wrap:wrap; gap:8px; }
-.pick button { padding:9px 13px; border-radius:9px; border:1.5px solid var(--rule);
-  background:var(--paper2); font-size:14.5px; font-weight:700; color:var(--ink2); }
+.pick { gap:6px; }
+.pick button { padding:7px 11px; border-radius:8px; border:1.5px solid var(--rule);
+  background:var(--paper2); font-size:13.5px; font-weight:700; color:var(--ink2); }
 .pick button.on { border-color:var(--gold); background:#FDF7E6; color:#6B5210; }
 .tbl { width:100%; border-collapse:collapse; font-size:14px; }
 .tbl th, .tbl td { padding:8px 4px; border-bottom:1px solid var(--rule2); text-align:right; }
@@ -197,3 +198,29 @@ svg.spark { width:100%; height:110px; display:block; }
   .book > .right { display:block; }
   .strip { display:none; }
 }
+
+/* ── the one chart ── */
+.hero { padding:18px 0 6px; }
+.hero .k { font-size:11.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--faint); }
+.hero .v { font-size:34px; font-weight:800; letter-spacing:-.5px; margin-top:2px; }
+.hero .s { font-size:13px; color:var(--ink2); margin-top:3px; }
+.hero .s.pos { color:var(--in); } .hero .s.neg { color:var(--out); }
+
+.chart { position:relative; margin:4px 0 6px; }
+.chart-svg { width:100%; height:auto; display:block; touch-action:pan-y; }
+.chart-grid { stroke:var(--rule2); stroke-width:1; }
+.chart-zero { stroke:var(--rule); stroke-width:1.5; }
+.chart-axis { fill:var(--faint); font-size:10.5px; font-family:var(--sans); font-variant-numeric:tabular-nums; }
+.chart-area { fill:rgba(22,48,107,.10); }
+.chart-line { fill:none; stroke:var(--ink); stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+.chart-end { fill:var(--ink); stroke:var(--paper2); stroke-width:2; }
+.chart-cross { stroke:var(--gold); stroke-width:1; stroke-dasharray:3 3; }
+.chart-dot { fill:var(--gold); stroke:var(--paper2); stroke-width:2; }
+.chart-tip { position:absolute; top:0; transform:translateX(-50%); background:var(--ink); color:#fff;
+  padding:6px 9px; border-radius:8px; pointer-events:none; white-space:nowrap; }
+.chart-tip .k { font-size:10.5px; opacity:.75; }
+.chart-tip .v { font-size:14px; font-weight:800; }
+.chart-empty { padding:36px 0; text-align:center; color:var(--faint); font-size:14px; }
+
+/* stacked full-width buttons must not touch */
+.big + .big { margin-top:8px; }

@@ -2,19 +2,20 @@
    Pure aggregates over a date range. Debts are excluded everywhere; commissions
    are shown against volume but never inside a total.                         */
 
-import { NETWORKS, TX_TYPES, toP, toGhs, monthKey, WEEKDAYS, parseDay, groupBy, sum } from './util.js';
+import { NETWORKS, TX_TYPES, toP, toGhs, monthKey, WEEKDAYS, parseDay, dayKey, today, groupBy, sum } from './util.js';
 import { dayReport, debtBalances } from './calc.js';
 
 /* end = last date that holds data, per spec. */
 export function rangeFor(preset, dates, custom = {}) {
-  const end = custom.end || dates[dates.length - 1] || new Date().toISOString().slice(0, 10);
+  const end = custom.end || dates[dates.length - 1] || today();
+  /* dayKey, not toISOString: a local midnight turns into the day before in UTC */
   const back = (n) => {
     const d = parseDay(end); d.setDate(d.getDate() - (n - 1));
-    return d.toISOString().slice(0, 10);
+    return dayKey(d);
   };
   const months = (n) => {
     const d = parseDay(end); d.setMonth(d.getMonth() - n);
-    return d.toISOString().slice(0, 10);
+    return dayKey(d);
   };
   switch (preset) {
     case 'day':    return { start: end, end, label: 'Today' };

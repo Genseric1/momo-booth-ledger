@@ -6,7 +6,17 @@
 import { el, toast, fill, amountInput } from '../ui.js';
 import { WALLETS, WALLET_LABEL, money, dayLabel, addDays } from '../util.js';
 import * as store from '../store.js';
+import * as sync from '../sync.js';
 import { reportFor } from './page.js';
+
+/* A read-only account sees the figures as text, not as fields to fill. */
+function readOnly(field) {
+  for (const input of field.querySelectorAll('input')) {
+    input.readOnly = true;
+    input.tabIndex = -1;
+  }
+  return field;
+}
 
 export function morningScreen(ctx) {
   const rep = reportFor(ctx.date);
@@ -32,8 +42,8 @@ export function morningScreen(ctx) {
         toast('Copied — check it before saving');
       },
     }) : null,
-    ...fields,
-    el('button.big', {
+    ...(sync.canWrite() ? fields : fields.map(readOnly)),
+    !sync.canWrite() ? null : el('button.big', {
       text: 'Save the morning count',
       onclick: async () => { await store.setOpening(ctx.date, vals, ctx.agent); toast('Morning saved'); ctx.go('page'); },
     }));
@@ -58,12 +68,12 @@ export function eveningScreen(ctx) {
     fill(out, 
       el('h2', { text: `Evening — ${dayLabel(ctx.date, { weekday: false })}` }),
       el('p.lead', { text: 'Count for real. This is the number that matters.' }),
-      ...fields,
-      el('div.field',
+      ...(sync.canWrite() ? fields : fields.map(readOnly)),
+      !sync.canWrite() ? null : el('div.field',
         el('label', { text: 'Extra fees you collected today (if you know)' }),
         amountInput({ value: extras, placeholder: 'optional', oninput: (v) => { extras = v; } }),
         el('div.hint', { text: 'What customers pay you on top is not written line by line, so the page cannot know it.' })),
-      el('button.big', {
+      !sync.canWrite() ? null : el('button.big', {
         text: 'Save the evening count',
         onclick: async () => {
           await store.setClosing(ctx.date, vals, extras === '' ? null : Number(extras), ctx.agent);
@@ -110,7 +120,7 @@ function verdict(rep, ctx) {
     ...rep.hints.map((h) => el('p.note', {
       text: `${WALLET_LABEL[h.a]} is ${money(h.amount, { dp: 0 })} over and ${WALLET_LABEL[h.b]} is ${money(h.amount, { dp: 0 })} short — a line of ${money(h.amount, { dp: 0 })} was probably written on the wrong network.`,
     })),
-    el('button.big.quiet', {
+    !sync.canWrite() ? null : el('button.big.quiet', {
       text: rep.closed ? 'Reopen the day' : 'Close the day',
       style: { marginTop: '18px' },
       onclick: async () => {

@@ -44,6 +44,19 @@ the single ☰ button, so the list of the day keeps the whole screen.
 Entry speed is the success criterion. If writing a line here is slower than
 writing it in the notebook, agents go back to paper.
 
+## Statistics and debts
+
+**Statistics is one chart.** You choose what it draws — volume, cash in, cash
+out, lines or capital — for one network or all of them, over 7 days, 30 days or
+12 months. One series means one colour and no legend to decode; the figure above
+it is the total for the period and how it compares with the period before. What
+a line cannot say (biggest line, gaps, commissions) sits under it as plain rows.
+
+**Debts are a name and an amount.** "Someone owes us" or "we owe someone", and
+which wallet the money left or entered. It stays in the capital until it comes
+back; tap the person, confirm the amount, and the line leaves the page. The
+entries remain in the exported register.
+
 ## How the numbers work
 
 For each non-cancelled transaction of amount A on network W:

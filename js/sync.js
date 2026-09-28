@@ -17,6 +17,12 @@ export const status = { configured: false, online: navigator.onLine, signedIn: f
 export const hasSession = () => !!session?.access_token;
 export const currentEmail = () => session?.user?.email || null;
 
+/* A viewer — a boss given read access — is refused every insert by the
+   database. The app hides the pen rather than let him write lines that would
+   be rejected in silence on the next sync. */
+export const canWrite = () => status.role !== 'viewer';
+export const isViewer = () => status.role === 'viewer';
+
 const listeners = new Set();
 export const subscribe = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const emit = () => { for (const fn of listeners) fn(status); };
@@ -30,6 +36,7 @@ export async function init() {
   status.configured = !!(url && key);
   status.signedIn = !!session?.access_token;
   status.email = session?.user?.email || null;
+  status.role = await DB.getMeta('role', null);        // remembered, so it holds offline
   status.pendingCount = await countPending();
   addEventListener('online', () => { status.online = true; emit(); sync(); });
   addEventListener('offline', () => { status.online = false; emit(); });
@@ -56,6 +63,20 @@ async function rest(path, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+/* The role comes from the booth's own membership table. */
+async function loadRole() {
+  const booth = state.settings?.boothId;
+  const uid = session?.user?.id;
+  if (!booth || !uid) return null;
+  try {
+    const rows = await rest(`/rest/v1/booth_members?select=role&booth_id=eq.${booth}&user_id=eq.${uid}`);
+    status.role = rows?.[0]?.role || null;
+    await DB.setMeta('role', status.role);
+    emit();
+  } catch { /* keep the remembered role */ }
+  return status.role;
+}
+
 /* ── auth ── */
 export async function signIn(email, password) {
   const { url, key } = cfg();
@@ -67,12 +88,14 @@ export async function signIn(email, password) {
   session = await res.json();
   await DB.setMeta('session', session);
   status.signedIn = true; status.email = session.user?.email || email; emit();
+  await loadRole();
   return session;
 }
 export async function signOut() {
   session = null;
   await DB.setMeta('session', null);
-  status.signedIn = false; status.email = null; emit();
+  await DB.setMeta('role', null);
+  status.signedIn = false; status.email = null; status.role = null; emit();
 }
 async function refresh() {
   if (!session?.refresh_token) return false;
@@ -140,7 +163,9 @@ async function doSync() {
   status.busy = true; status.lastError = null; emit();
   let pushed = 0, pulled = 0;
   try {
+    if (!status.role) await loadRole();
     for (const s of STORE_NAMES) {
+      if (!canWrite()) { pulled += await pullStore(s); continue; }   // a viewer only reads
       try { pushed += await pushStore(s); }
       catch (e) {
         if (String(e.message).startsWith('401') && await refresh()) pushed += await pushStore(s);
