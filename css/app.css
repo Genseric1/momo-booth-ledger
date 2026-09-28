@@ -13,6 +13,12 @@
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body { height:100%; }
 body { background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:16px; line-height:1.3; }
+
+/* The pen belongs at the foot of the screen, not under the last line: the page
+   fills the height so the empty part of the day stays above it, like paper. */
+#app { display:flex; flex-direction:column; min-height:100vh; min-height:100dvh; }
+#app > .bar, #app > .writer { flex:0 0 auto; }
+#app > .book, #app > .sheetview, #app > .lock { flex:1 1 auto; }
 button { font:inherit; color:inherit; border:none; background:none; cursor:pointer; }
 input,select,textarea { font:inherit; color:inherit; }
 .num { font-variant-numeric:tabular-nums; letter-spacing:.2px; }
@@ -50,9 +56,11 @@ input,select,textarea { font:inherit; color:inherit; }
 /* ── le bloc de totaux, écrit en bas de page ── */
 .totals { padding:16px 14px 18px 26px; }
 .totals .t { display:flex; align-items:baseline; gap:10px; padding:5px 0; }
-.totals .t .k { width:92px; font-size:14px; color:var(--ink2); }
-.totals .t .v { flex:1; text-align:right; font-size:17px; font-weight:600; }
-.totals .t .d { font-size:11.5px; color:var(--faint); width:74px; text-align:right; }
+.totals .t .k { flex:1; font-size:14px; color:var(--ink2); min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.totals .t .v { text-align:right; font-size:17px; font-weight:600; }
+.totals .t .v.owed { color:var(--in); }
+.totals .t .v.owing { color:var(--out); }
 .totals .sum { margin-top:6px; padding-top:9px; border-top:2px solid var(--ink);
   display:flex; align-items:baseline; gap:10px; }
 .totals .sum .k { width:92px; font-size:14px; font-weight:700; }
@@ -66,7 +74,7 @@ input,select,textarea { font:inherit; color:inherit; }
 @keyframes flash { from { background:#FFF4CE; } to { background:transparent; } }
 
 /* ── the strip: where each wallet stands, one glance, one line ── */
-.strip { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; width:100%;
+.strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(0,1fr)); gap:6px; width:100%;
   padding:7px 12px 8px; background:var(--paper2); border-bottom:1px solid var(--rule);
   position:sticky; top:0; z-index:15; text-align:left; }
 .strip .cell { min-width:0; }

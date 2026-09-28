@@ -89,13 +89,14 @@ test('8 — with every box unchecked the PDF holds no balances, no statistics, m
   const args = { boothName: 'PACSBI MoMo booth', range: { start: '2026-09-28', end: '2026-09-28' }, days, txs };
 
   const bare = pdfText(buildRegister({ ...args, options: {} }));
-  assert.ok(bare.includes('Cash in'), 'the transactions themselves are always there');
+  assert.ok(bare.includes('500'), 'the lines themselves are always there');
+  assert.ok(bare.includes('in'), 'with the direction written as in the book');
   assert.ok(!bare.includes(number), 'no full customer number');
   assert.ok(bare.includes(displayNumber(number, 'masked')), 'the masked number is printed');
-  assert.ok(!/Statistics/i.test(bare), 'no statistics section');
-  assert.ok(!/Opening and closing/i.test(bare), 'no balances section');
-  assert.ok(!/extras/i.test(bare), 'no extras section');
-  assert.ok(!bare.includes('250.00'), 'cancelled lines stay out unless asked for');
+  assert.ok(!/IN FIGURES/i.test(bare), 'no statistics block');
+  assert.ok(!bare.includes('10,000'), 'no balances: the morning count is not printed');
+  assert.ok(!/extra fees/i.test(bare), 'no extras');
+  assert.ok(!bare.includes('250'), 'cancelled lines stay out unless asked for');
   assert.ok(bare.includes('customer numbers masked'), 'the footer says so');
 
   const full = pdfText(buildRegister({
@@ -103,9 +104,9 @@ test('8 — with every box unchecked the PDF holds no balances, no statistics, m
     options: { balances: true, statistics: true, extras: true, cancelled: true, fullNumbers: true },
   }));
   assert.ok(full.includes(displayNumber(number, 'full')), 'the full number is printed in readable blocks');
-  assert.ok(/Statistics/i.test(full));
-  assert.ok(/OPENING AND CLOSING BALANCES/i.test(full));
-  assert.ok(full.includes('250.00'), 'cancelled line is printed when asked for');
+  assert.ok(/IN FIGURES/i.test(full), 'the figures block is there when asked for');
+  assert.ok(full.includes('9,500'), 'the counted balances are printed');
+  assert.ok(full.includes('250'), 'cancelled line is printed when asked for');
 });
 
 test('a password-protected PDF is encrypted and declares the standard handler', () => {

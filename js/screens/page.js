@@ -53,19 +53,29 @@ function strip(rep, ctx) {
   const cell = (k, v, big = false) => el(`div.cell${big ? '.tot' : ''}`,
     el('div.k', { text: k }),
     el('div.v.num', { text: money(v, { dp: 0 }) }));
+  const debts = rep.owed_to_us - rep.we_owe;
   return el('div.strip', { onclick: () => ctx.go('evening'), title: 'the evening count' },
     ...WALLETS.map((w) => cell(WALLET_LABEL[w], rep.hasOpening ? rep.expected[w] : rep.movement[w])),
+    debts ? cell('owed', debts) : null,
     cell('total', rep.hasOpening ? rep.expectedCapital : 0, true));
 }
 
 /* The block written at the foot of the facing page, where there is room for it. */
 function totalsBlock(rep, ctx) {
   const b = (w) => rep.hasOpening ? rep.expected[w] : rep.movement[w];
+  const bal = debtBalances(store.state.debtEntries.filter((e) => e.day <= ctx.date));
+  const owing = store.state.debtAccounts
+    .map((a) => ({ name: a.name, net: bal.perAccount.get(a.account_id)?.net || 0 }))
+    .filter((p) => Math.abs(p.net) > 0.004);
+  const row = (label, value, cls = '') => el('div.t',
+    el('div.k', { text: label }),
+    el(`div.v.num ${cls}`.trim(), { text: money(value, { dp: 0 }) }));
+
   return el('div.totals',
-    ...WALLETS.map((w) => el('div.t',
-      el('div.k', { text: WALLET_LABEL[w] }),
-      el('div.d.num', { text: rep.movement[w] ? money(rep.movement[w], { sign: true, dp: 0 }) : '' }),
-      el('div.v.num', { text: money(b(w), { dp: 0 }) }))),
+    ...WALLETS.map((w) => row(WALLET_LABEL[w], b(w))),
+    /* the people are part of the capital: without them the total would not
+       add up to the lines written above it */
+    ...owing.map((p) => row(p.name, p.net, p.net > 0 ? 'owed' : 'owing')),
     el('div.sum',
       el('div.k', { text: 'TOTAL' }),
       el('div.v.num', { text: money(rep.hasOpening ? rep.expectedCapital : 0, { dp: 0 }) })),

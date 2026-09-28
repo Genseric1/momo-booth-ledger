@@ -4,7 +4,7 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Count 1 /Kids [6 0 R] >>
+<< /Type /Pages /Count 2 /Kids [6 0 R 8 0 R] >>
 endobj
 3 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
@@ -13,135 +13,149 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
 endobj
 5 0 obj
-<< /Title (PACSBI MoMo booth - register 2026-09-28 to 2026-09-28) /Author (MoMo Booth Ledger) /Producer (MoMo Booth Ledger) /CreationDate (D:20260928100951) >>
+<< /Title (PACSBI MoMo booth - register 2026-09-28 to 2026-09-29) /Author (MoMo Booth Ledger) /Producer (MoMo Booth Ledger) /CreationDate (D:20260928124236) >>
 endobj
 6 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 7 0 R >>
 endobj
 7 0 obj
-<< /Length 7311 >>
+<< /Length 5836 >>
 stream
-BT /F2 15 Tf 0.09 0.13 0.2 rg 1 0 0 1 40 791.89 Tm (PACSBI MoMo booth) Tj ET
-BT /F2 9 Tf 0.62 0.5 0.18 rg 1 0 0 1 477.77 791.89 Tm (MOMO REGISTER) Tj ET
-BT /F1 9 Tf 0.42 0.46 0.53 rg 1 0 0 1 40 775.89 Tm (28 Sept 2026  to  28 Sept 2026) Tj ET
-BT /F1 8 Tf 0.42 0.46 0.53 rg 1 0 0 1 452.1 775.89 Tm (Printed 28/09/2026, 10:09:51) Tj ET
-[] 0 d 1 w 0.62 0.5 0.18 RG 40 767.89 m 555.28 767.89 l S
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 40 745.89 Tm (DATE) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 114 745.89 Tm (TIME) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 168.75 745.89 Tm (NO) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 182 745.89 Tm (TYPE) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 244 745.89 Tm (NETWORK) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 345.09 745.89 Tm (AMOUNT) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 380 745.89 Tm (CUSTOMER) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 462 745.89 Tm (AGENT) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 522 745.89 Tm (NOTE) Tj ET
-[] 0 d 0.6 w 0.8 0.83 0.88 RG 40 741.89 m 555.28 741.89 l S
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 40 728.89 Tm (Mon, 28 Sept 20...) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 114 728.89 Tm (10:05) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 175.27 728.89 Tm (1) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 182 728.89 Tm (Cash in) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 244 728.89 Tm (Telecel) Tj ET
-BT /F2 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 344.92 728.89 Tm (2,500.00) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 380 728.89 Tm (0209***776) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 462 728.89 Tm () Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 522 728.89 Tm () Tj ET
-[] 0 d 0.35 w 0.8 0.83 0.88 RG 40 724.89 m 555.28 724.89 l S
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 40 715.89 Tm () Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 114 715.89 Tm (11:20) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 175.27 715.89 Tm (2) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 182 715.89 Tm (Cash out) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 244 715.89 Tm (AT) Tj ET
-BT /F2 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 356.73 715.89 Tm (80.00) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 380 715.89 Tm (0574***667) Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 462 715.89 Tm () Tj ET
-BT /F1 8.5 Tf 0.09 0.13 0.2 rg 1 0 0 1 522 715.89 Tm () Tj ET
-[] 0 d 0.35 w 0.8 0.83 0.88 RG 40 711.89 m 555.28 711.89 l S
-BT /F1 8.5 Tf 0.7 0.15 0.15 rg 1 0 0 1 40 702.89 Tm () Tj ET
-[] 0 d 0.7 w 0.7 0.15 0.15 RG 40 705.44 m 40 705.44 l S
-BT /F1 8.5 Tf 0.7 0.15 0.15 rg 1 0 0 1 114 702.89 Tm (12:00) Tj ET
-[] 0 d 0.7 w 0.7 0.15 0.15 RG 114 705.44 m 135.27 705.44 l S
-BT /F1 8.5 Tf 0.7 0.15 0.15 rg 1 0 0 1 175.27 702.89 Tm (3) Tj ET
-[] 0 d 0.7 w 0.7 0.15 0.15 RG 175.27 705.44 m 180 705.44 l S
-BT /F1 8.5 Tf 0.7 0.15 0.15 rg 1 0 0 1 182 702.89 Tm (Cash in) Tj ET
-[] 0 d 0.7 w 0.7 0.15 0.15 RG 182 705.44 m 210.82 705.44 l S
-BT /F1 8.5 Tf 0.7 0.15 0.15 rg 1 0 0 1 244 702.89 Tm (MTN) Tj ET
-[] 0 d 0.7 w 0.7 0.15 0.15 RG 244 705.44 m 262.41 705.44 l S
-BT /F2 8.5 Tf 0.7 0.15 0.15 rg 1 0 0 1 356.73 702.89 Tm (50.00) Tj ET
-[] 0 d 0.7 w 0.7 0.15 0.15 RG 356.73 705.44 m 378 705.44 l S
-BT /F1 8.5 Tf 0.7 0.15 0.15 rg 1 0 0 1 380 702.89 Tm (0248***999) Tj ET
-[] 0 d 0.7 w 0.7 0.15 0.15 RG 380 705.44 m 423 705.44 l S
-BT /F1 8.5 Tf 0.7 0.15 0.15 rg 1 0 0 1 462 702.89 Tm () Tj ET
-[] 0 d 0.7 w 0.7 0.15 0.15 RG 462 705.44 m 462 705.44 l S
-BT /F1 8.5 Tf 0.7 0.15 0.15 rg 1 0 0 1 522 702.89 Tm (wrong network) Tj ET
-[] 0 d 0.7 w 0.7 0.15 0.15 RG 522 705.44 m 577.27 705.44 l S
-[] 0 d 0.35 w 0.8 0.83 0.88 RG 40 698.89 m 555.28 698.89 l S
-[] 0 d 1 w 0.62 0.5 0.18 RG 40 692.89 m 555.28 692.89 l S
-BT /F2 9 Tf 0.09 0.13 0.2 rg 1 0 0 1 40 678.89 Tm (2 transactions) Tj ET
-BT /F1 9 Tf 0.09 0.13 0.2 rg 1 0 0 1 170 678.89 Tm (Cash in  GHS 2,500.00) Tj ET
-BT /F1 9 Tf 0.09 0.13 0.2 rg 1 0 0 1 320 678.89 Tm (Cash out  GHS 80.00) Tj ET
-BT /F1 9 Tf 0.09 0.13 0.2 rg 1 0 0 1 453.24 678.89 Tm (Airtime/bundle  GHS 0.00) Tj ET
-BT /F2 10 Tf 0.62 0.5 0.18 rg 1 0 0 1 40 638.89 Tm (OPENING AND CLOSING BALANCES) Tj ET
-[] 0 d 0.6 w 0.8 0.83 0.88 RG 40 632.89 m 555.28 632.89 l S
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 40 615.89 Tm (DATE) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 189.76 615.89 Tm (MTN) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 249.83 615.89 Tm (TELECEL) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 352 615.89 Tm (AT) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 418.75 615.89 Tm (CASH) Tj ET
-BT /F2 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 491.5 615.89 Tm (CAPITAL) Tj ET
-BT /F1 8 Tf 0.42 0.46 0.53 rg 1 0 0 1 40 603.89 Tm (Mon, 28 Sept 2026) Tj ET
-BT /F1 8 Tf 0.42 0.46 0.53 rg 1 0 0 1 170.42 603.89 Tm (10,000.00) Tj ET
-BT /F1 8 Tf 0.42 0.46 0.53 rg 1 0 0 1 248.42 603.89 Tm (10,000.00) Tj ET
-BT /F1 8 Tf 0.42 0.46 0.53 rg 1 0 0 1 326.42 603.89 Tm (10,000.00) Tj ET
-BT /F1 8 Tf 0.42 0.46 0.53 rg 1 0 0 1 404.42 603.89 Tm (10,000.00) Tj ET
-BT /F1 8 Tf 0.42 0.46 0.53 rg 1 0 0 1 488.42 603.89 Tm (40,000.00) Tj ET
-BT /F1 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 40 591.89 Tm ( \(expected close\)) Tj ET
-BT /F1 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 170.42 591.89 Tm (10,000.00) Tj ET
-BT /F1 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 252.86 591.89 Tm (7,500.00) Tj ET
-BT /F1 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 326.42 591.89 Tm (10,080.00) Tj ET
-BT /F1 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 404.42 591.89 Tm (12,420.00) Tj ET
-BT /F1 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 488.42 591.89 Tm (40,000.00) Tj ET
-BT /F2 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 40 579.89 Tm ( \(counted\)) Tj ET
-BT /F2 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 170.42 579.89 Tm (10,000.00) Tj ET
-BT /F2 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 252.86 579.89 Tm (7,500.00) Tj ET
-BT /F2 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 326.42 579.89 Tm (10,080.00) Tj ET
-BT /F2 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 404.42 579.89 Tm (12,450.00) Tj ET
-BT /F2 8 Tf 0.09 0.13 0.2 rg 1 0 0 1 488.42 579.89 Tm (40,030.00) Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 40 567.89 Tm ( gap) Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 190.43 567.89 Tm (0.00) Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 268.43 567.89 Tm (0.00) Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 346.43 567.89 Tm (0.00) Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 415.31 567.89 Tm (+30.00) Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 499.31 567.89 Tm (+30.00) Tj ET
-BT /F1 8 Tf 0.62 0.5 0.18 rg 1 0 0 1 40 555.89 Tm ( extras \(estimate\)) Tj ET
-BT /F1 8 Tf 0.62 0.5 0.18 rg 1 0 0 1 206 555.89 Tm () Tj ET
-BT /F1 8 Tf 0.62 0.5 0.18 rg 1 0 0 1 284 555.89 Tm () Tj ET
-BT /F1 8 Tf 0.62 0.5 0.18 rg 1 0 0 1 362 555.89 Tm () Tj ET
-BT /F1 8 Tf 0.62 0.5 0.18 rg 1 0 0 1 419.98 555.89 Tm (30.00) Tj ET
-BT /F1 8 Tf 0.62 0.5 0.18 rg 1 0 0 1 524 555.89 Tm () Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 40 543.89 Tm ( residual gap) Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 206 543.89 Tm () Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 284 543.89 Tm () Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 362 543.89 Tm () Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 440 543.89 Tm () Tj ET
-BT /F1 8 Tf 0.7 0.15 0.15 rg 1 0 0 1 508.43 543.89 Tm (0.00) Tj ET
-[] 0 d 0.4 w 0.8 0.83 0.88 RG 40 52 m 555.28 52 l S
-BT /F1 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 40 40 Tm (PACSBI MoMo booth) Tj ET
-BT /F1 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 278.46 40 Tm (Page 1 of 1) Tj ET
-BT /F1 7.5 Tf 0.42 0.46 0.53 rg 1 0 0 1 464.84 40 Tm (customer numbers masked) Tj ET
+BT /F2 15 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 775.89 Tm (PACSBI MoMo booth) Tj ET
+BT /F1 9.5 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 759.89 Tm (28 Sept 2026  to  29 Sept 2026) Tj ET
+BT /F1 8.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 470.4 759.89 Tm (printed 28/09/2026) Tj ET
+[] 0 d 0.8 w 0.66 0.5 0.12 RG 54 753.89 m 541.28 753.89 l S
+BT /F2 12 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 718.89 Tm (Mon, 28 Sept 2026) Tj ET
+BT /F1 9 Tf 0.72 0.75 0.8 rg 1 0 0 1 515.27 718.89 Tm (4 lines) Tj ET
+[] 0 d 0.5 w 0.72 0.75 0.8 RG 54 711.89 m 541.28 711.89 l S
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 690.89 Tm (020 9** *776) Tj ET
+BT /F1 9 Tf 0.48 0.52 0.58 rg 1 0 0 1 170 690.89 Tm (telecel) Tj ET
+BT /F2 10.5 Tf 0.09 0.19 0.42 rg 1 0 0 1 226 690.89 Tm (in) Tj ET
+BT /F2 12 Tf 0.09 0.19 0.42 rg 1 0 0 1 511.26 690.89 Tm (2,000) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 670.89 Tm (057 4** *667) Tj ET
+BT /F1 9 Tf 0.48 0.52 0.58 rg 1 0 0 1 170 670.89 Tm (at) Tj ET
+BT /F2 10.5 Tf 0.09 0.19 0.42 rg 1 0 0 1 226 670.89 Tm (out) Tj ET
+BT /F1 8.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 286 670.89 Tm (Kofi) Tj ET
+BT /F2 12 Tf 0.09 0.19 0.42 rg 1 0 0 1 527.94 670.89 Tm (80) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 650.89 Tm (024 4** *456) Tj ET
+BT /F1 9 Tf 0.48 0.52 0.58 rg 1 0 0 1 170 650.89 Tm (mtn) Tj ET
+BT /F2 10.5 Tf 0.09 0.19 0.42 rg 1 0 0 1 226 650.89 Tm (in) Tj ET
+BT /F2 12 Tf 0.09 0.19 0.42 rg 1 0 0 1 504.58 650.89 Tm (10,000) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 630.89 Tm (024 8** *999) Tj ET
+BT /F1 9 Tf 0.48 0.52 0.58 rg 1 0 0 1 170 630.89 Tm (mtn) Tj ET
+BT /F2 10.5 Tf 0.09 0.19 0.42 rg 1 0 0 1 226 630.89 Tm (airtime) Tj ET
+BT /F2 12 Tf 0.09 0.19 0.42 rg 1 0 0 1 527.94 630.89 Tm (50) Tj ET
+BT /F1 11 Tf 0.75 0.22 0.17 rg 1 0 0 1 54 610.89 Tm (055 6** *502) Tj ET
+[] 0 d 0.7 w 0.75 0.22 0.17 RG 54 614.19 m 115.77 614.19 l S
+BT /F1 9 Tf 0.75 0.22 0.17 rg 1 0 0 1 170 610.89 Tm (mtn) Tj ET
+BT /F2 10.5 Tf 0.75 0.22 0.17 rg 1 0 0 1 226 610.89 Tm (out) Tj ET
+[] 0 d 0.7 w 0.75 0.22 0.17 RG 226 614.04 m 242.33 614.04 l S
+BT /F1 8.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 286 610.89 Tm (customer changed his mind) Tj ET
+BT /F2 12 Tf 0.75 0.22 0.17 rg 1 0 0 1 521.26 610.89 Tm (450) Tj ET
+[] 0 d 0.7 w 0.75 0.22 0.17 RG 521.26 614.49 m 541.28 614.49 l S
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 580.89 Tm (MTN) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 507.64 580.89 Tm (19,980) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 564.89 Tm (Telecel) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 513.76 564.89 Tm (8,000) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 548.89 Tm (AT) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 507.64 548.89 Tm (10,080) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 532.89 Tm (Cash) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 513.76 532.89 Tm (5,500) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 516.89 Tm (Modeste) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 513.76 516.89 Tm (2,000) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 500.89 Tm (Supplier Ama) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 519.27 500.89 Tm (-500) Tj ET
+[] 0 d 1 w 0.09 0.19 0.42 RG 278.15 491.89 m 541.28 491.89 l S
+BT /F2 10 Tf 0.09 0.19 0.42 rg 1 0 0 1 278.15 473.89 Tm (TOTAL) Tj ET
+BT /F2 13 Tf 0.09 0.19 0.42 rg 1 0 0 1 501.53 473.89 Tm (45,060) Tj ET
+[] 0 d 0.6 w 0.09 0.19 0.42 RG 278.15 467.89 m 541.28 467.89 l S
+BT /F1 9 Tf 0.75 0.22 0.17 rg 1 0 0 1 370.42 447.89 Tm (+5,060 against the page, 30 of it extra fees) Tj ET
+BT /F2 12 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 417.89 Tm (Tue, 29 Sept 2026) Tj ET
+BT /F1 9 Tf 0.72 0.75 0.8 rg 1 0 0 1 515.27 417.89 Tm (2 lines) Tj ET
+[] 0 d 0.5 w 0.72 0.75 0.8 RG 54 410.89 m 541.28 410.89 l S
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 389.89 Tm (024 5** *001) Tj ET
+BT /F1 9 Tf 0.48 0.52 0.58 rg 1 0 0 1 170 389.89 Tm (mtn) Tj ET
+BT /F2 10.5 Tf 0.09 0.19 0.42 rg 1 0 0 1 226 389.89 Tm (in) Tj ET
+BT /F2 12 Tf 0.09 0.19 0.42 rg 1 0 0 1 521.26 389.89 Tm (300) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 369.89 Tm (020 1** *567) Tj ET
+BT /F1 9 Tf 0.48 0.52 0.58 rg 1 0 0 1 170 369.89 Tm (telecel) Tj ET
+BT /F2 10.5 Tf 0.09 0.19 0.42 rg 1 0 0 1 226 369.89 Tm (out) Tj ET
+BT /F2 12 Tf 0.09 0.19 0.42 rg 1 0 0 1 511.26 369.89 Tm (1,200) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 339.89 Tm (MTN) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 507.64 339.89 Tm (19,680) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 323.89 Tm (Telecel) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 513.76 323.89 Tm (9,200) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 307.89 Tm (AT) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 507.64 307.89 Tm (10,080) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 291.89 Tm (Cash) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 513.76 291.89 Tm (4,600) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 275.89 Tm (Modeste) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 513.76 275.89 Tm (2,000) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 278.15 259.89 Tm (Supplier Ama) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 519.27 259.89 Tm (-500) Tj ET
+[] 0 d 1 w 0.09 0.19 0.42 RG 278.15 250.89 m 541.28 250.89 l S
+BT /F2 10 Tf 0.09 0.19 0.42 rg 1 0 0 1 278.15 232.89 Tm (EXPECTED) Tj ET
+BT /F2 13 Tf 0.09 0.19 0.42 rg 1 0 0 1 501.53 232.89 Tm (45,060) Tj ET
+[] 0 d 0.6 w 0.09 0.19 0.42 RG 278.15 226.89 m 541.28 226.89 l S
+[] 0 d 0.8 w 0.66 0.5 0.12 RG 54 192.89 m 541.28 192.89 l S
+BT /F2 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 174.89 Tm (6 lines) Tj ET
+BT /F1 10.5 Tf 0.48 0.52 0.58 rg 1 0 0 1 379.01 174.89 Tm (in 12,300     out 1,280     airtime 50) Tj ET
+[] 0 d 0.4 w 0.72 0.75 0.8 RG 54 68 m 541.28 68 l S
+BT /F1 7.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 54 56 Tm (PACSBI MoMo booth) Tj ET
+BT /F1 7.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 288.26 56 Tm (1 of 2) Tj ET
+BT /F1 7.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 450.84 56 Tm (customer numbers masked) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 2087 >>
+stream
+BT /F2 15 Tf 0.09 0.19 0.42 rg 1 0 0 1 54 775.89 Tm (PACSBI MoMo booth) Tj ET
+BT /F1 9.5 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 759.89 Tm (28 Sept 2026  to  29 Sept 2026) Tj ET
+BT /F1 8.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 470.4 759.89 Tm (printed 28/09/2026) Tj ET
+[] 0 d 0.8 w 0.66 0.5 0.12 RG 54 753.89 m 541.28 753.89 l S
+BT /F2 9 Tf 0.66 0.5 0.12 rg 1 0 0 1 54 700.89 Tm (STILL OWED) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 682.89 Tm (Modeste - owes us) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 513.76 682.89 Tm (2,000) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 663.89 Tm (Supplier Ama - we owe) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 522.93 663.89 Tm (500) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 644.89 Tm (In the capital) Tj ET
+BT /F2 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 507.33 644.89 Tm (+1,500) Tj ET
+BT /F2 9 Tf 0.66 0.5 0.12 rg 1 0 0 1 54 607.89 Tm (THE PERIOD IN FIGURES) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 589.89 Tm (Volume) Tj ET
+BT /F2 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 507.64 589.89 Tm (13,630) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 570.89 Tm (Average line) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 498.47 570.89 Tm (2,271.67) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 551.89 Tm (Biggest line) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 507.64 551.89 Tm (10,000) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 524.89 Tm (MTN - 3 lines) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 431.2 524.89 Tm (10,350     float -10,350) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 505.89 Tm (Telecel - 2 lines) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 452.61 505.89 Tm (3,200     float -800) Tj ET
+BT /F1 10 Tf 0.48 0.52 0.58 rg 1 0 0 1 54 486.89 Tm (AT - 1 line) Tj ET
+BT /F1 11 Tf 0.09 0.19 0.42 rg 1 0 0 1 471.25 486.89 Tm (80     float +80) Tj ET
+[] 0 d 0.4 w 0.72 0.75 0.8 RG 54 68 m 541.28 68 l S
+BT /F1 7.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 54 56 Tm (PACSBI MoMo booth) Tj ET
+BT /F1 7.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 288.26 56 Tm (2 of 2) Tj ET
+BT /F1 7.5 Tf 0.72 0.75 0.8 rg 1 0 0 1 450.84 56 Tm (customer numbers masked) Tj ET
 endstream
 endobj
 xref
-0 8
+0 10
 0000000000 65535 f 
 0000000019 00000 n 
 0000000068 00000 n 
-0000000125 00000 n 
-0000000222 00000 n 
-0000000324 00000 n 
-0000000499 00000 n 
-0000000641 00000 n 
+0000000131 00000 n 
+0000000228 00000 n 
+0000000330 00000 n 
+0000000505 00000 n 
+0000000647 00000 n 
+0000006535 00000 n 
+0000006677 00000 n 
 trailer
-<< /Size 8 /Root 1 0 R /Info 5 0 R /ID [<5B906BA2894A145A0DB062601D1BA8A7> <5B906BA2894A145A0DB062601D1BA8A7>] >>
+<< /Size 10 /Root 1 0 R /Info 5 0 R /ID [<CC9C1D3257DEC42F590A16BC829063B3> <CC9C1D3257DEC42F590A16BC829063B3>] >>
 startxref
-8004
+8816
 %%EOF

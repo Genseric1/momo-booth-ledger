@@ -1,48 +1,38 @@
-/* ═══════════════ PDF REGISTER (spec §8) ═══════════════
-   Reads like the notebook it replaces: date, time, type, network, amount.
-   Each option is an independent checkbox; with all of them off the file holds
-   dates and transactions only, and customer numbers stay masked.            */
+/* ═══════════════ THE REGISTER ═══════════════
+   The printed page carries the same four things as the screen: the number, the
+   network, in or out, the amount. The date is a heading, the way it is written
+   once at the top of a page in the book, and each day closes on its own totals.
+   Every option is a separate checkbox; with all of them off the file holds the
+   lines and nothing else, numbers masked.                                     */
 
 import { Pdf } from './pdf.js';
-import { WALLETS, NETWORKS, TYPE_LABEL, WALLET_LABEL, KIND_LABEL, money, dayLabel, timeLabel, displayNumber } from './util.js';
+import { WALLETS, NETWORKS, WALLET_LABEL, money, dayLabel, displayNumber, toP, toGhs, sum } from './util.js';
 import { dayReport, debtBalances } from './calc.js';
-import { stats } from './stats.js';
 
-const INK = [0.09, 0.13, 0.20];
-const DIM = [0.42, 0.46, 0.53];
-const RULE = [0.80, 0.83, 0.88];
-const GOLD = [0.62, 0.50, 0.18];
-const RED = [0.70, 0.15, 0.15];
+const INK = [0.09, 0.19, 0.42];
+const GREY = [0.48, 0.52, 0.58];
+const FAINT = [0.72, 0.75, 0.80];
+const GOLD = [0.66, 0.50, 0.12];
+const RED = [0.75, 0.22, 0.17];
 
-const M = 40;                         // page margin
-const COLS = [
-  { k: 'date',   label: 'Date',     w: 74,  align: 'left' },
-  { k: 'time',   label: 'Time',     w: 38,  align: 'left' },
-  { k: 'no',     label: 'No',       w: 30,  align: 'right' },
-  { k: 'type',   label: 'Type',     w: 62,  align: 'left' },
-  { k: 'net',    label: 'Network',  w: 58,  align: 'left' },
-  { k: 'amount', label: 'Amount',   w: 78,  align: 'right' },
-  { k: 'cust',   label: 'Customer', w: 82,  align: 'left' },
-  { k: 'agent',  label: 'Agent',    w: 60,  align: 'left' },
-  { k: 'note',   label: 'Note',     w: 0,   align: 'left' },     // 0 = take the rest
-];
+const M = 54;                       // a wide margin: the page should feel empty
+const LINE = 20;                    // one written line, with room to breathe
+const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'airtime', bundle: 'bundle' };
+
+/* Whole cedis unless there are pesewas — the book writes round numbers. */
+const amt = (v) => money(v, { dp: Number.isInteger(Number(v)) ? 0 : 2 });
+const countLines = (n) => (n === 1 ? '1 line' : `${n} lines`);
 
 export function buildRegister({
   boothName, range, days, txs, debtEntries = [], debtAccounts = [], commissions = [],
   options = {}, password = '',
 }) {
-  const o = {
-    balances: false, statistics: false, extras: false, cancelled: false, fullNumbers: false, debts: false,
-    ...options,
-  };
-  const pdf = new Pdf({
-    size: 'A4', password,
-    title: `${boothName} — register ${range.start} to ${range.end}`,
-  });
+  const o = { balances: false, statistics: false, extras: false, cancelled: false,
+    debts: false, fullNumbers: false, ...options };
 
-  const contentW = pdf.w - M * 2;
-  let noteW = contentW - COLS.reduce((t, c) => t + c.w, 0);
-  const cols = COLS.map((c) => ({ ...c, w: c.w || Math.max(60, noteW) }));
+  const pdf = new Pdf({ size: 'A4', password, title: `${boothName} — register ${range.start} to ${range.end}` });
+  const right = pdf.w - M;
+  const COL = { number: M, network: M + 116, dir: M + 172, note: M + 232 };
   let y = 0;
 
   const rows = txs
@@ -50,101 +40,31 @@ export function buildRegister({
     .filter((t) => o.cancelled || !t.cancelled)
     .sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : a.time < b.time ? -1 : 1));
 
-  const header = (sub) => {
+  const header = () => {
     y = M;
-    pdf.text(M, y + 10, boothName, { size: 15, bold: true, color: INK });
-    pdf.text(pdf.w - M, y + 10, 'MOMO REGISTER', { size: 9, bold: true, color: GOLD, align: 'right' });
-    y += 16;
-    pdf.text(M, y + 10, sub, { size: 9, color: DIM });
-    pdf.text(pdf.w - M, y + 10, `Printed ${new Date().toLocaleString('en-GB')}`, { size: 8, color: DIM, align: 'right' });
+    pdf.text(M, y + 12, boothName, { size: 15, bold: true, color: INK });
     y += 18;
-    pdf.line(M, y, pdf.w - M, y, { width: 1, color: GOLD });
-    y += 14;
-  };
-  const tableHead = () => {
-    let x = M;
-    for (const c of cols) {
-      pdf.text(c.align === 'right' ? x + c.w - 2 : x, y + 8, c.label.toUpperCase(),
-        { size: 7.5, bold: true, color: DIM, align: c.align });
-      x += c.w;
-    }
-    y += 12;
-    pdf.line(M, y, pdf.w - M, y, { width: 0.6, color: RULE });
-    y += 4;
-  };
-  const room = (need = 16) => {
-    if (y + need < pdf.h - M - 18) return;
-    pdf.addPage();
-    header(`${dayLabel(range.start, { weekday: false })}  to  ${dayLabel(range.end, { weekday: false })}`);
-    tableHead();
-  };
-
-  header(`${dayLabel(range.start, { weekday: false })}  to  ${dayLabel(range.end, { weekday: false })}`);
-  tableHead();
-
-  /* ── the register itself: one ruled line per transaction ── */
-  let lastDay = null, n = 0, printed = 0;
-  for (const t of rows) {
-    room(15);
-    if (t.day !== lastDay) { lastDay = t.day; n = 0; }
-    n++; printed++;
-    const cust = displayNumber(t.customer_number, o.fullNumbers ? 'full' : 'masked');
-    const cells = {
-      date: n === 1 ? dayLabel(t.day) : '',
-      time: timeLabel(t.time),
-      no: String(n),
-      type: TYPE_LABEL[t.type] + (t.sub_type ? ` (${t.sub_type[0]})` : ''),
-      net: WALLET_LABEL[t.wallet] || t.wallet,
-      amount: money(t.amount),
-      cust, agent: t.agent || '', note: t.note || '',
-    };
-    const color = t.cancelled ? RED : INK;
-    let x = M;
-    for (const c of cols) {
-      const raw = cells[c.k] ?? '';
-      const txt = pdf.fit(raw, c.w - 4, 8.5, c.k === 'amount');
-      pdf.text(c.align === 'right' ? x + c.w - 2 : x, y + 9, txt,
-        { size: 8.5, bold: c.k === 'amount', color, align: c.align, strike: t.cancelled });
-      x += c.w;
-    }
-    y += 13;
-    pdf.line(M, y, pdf.w - M, y, { width: 0.35, color: RULE });
-  }
-  if (!printed) { pdf.text(M, y + 10, 'No transactions in this period.', { size: 9, color: DIM }); y += 16; }
-
-  /* running total of the register, always shown: it is what a register is for */
-  y += 6;
-  const live = rows.filter((t) => !t.cancelled);
-  const totalIn = live.filter((t) => t.type === 'cash_in').reduce((s, t) => s + Number(t.amount), 0);
-  const totalOut = live.filter((t) => t.type === 'cash_out').reduce((s, t) => s + Number(t.amount), 0);
-  const totalOther = live.filter((t) => t.type === 'airtime' || t.type === 'bundle').reduce((s, t) => s + Number(t.amount), 0);
-  room(30);
-  pdf.line(M, y, pdf.w - M, y, { width: 1, color: GOLD });
-  y += 14;
-  pdf.text(M, y, `${live.length} transactions`, { size: 9, bold: true, color: INK });
-  pdf.text(M + 130, y, `Cash in  GHS ${money(totalIn)}`, { size: 9, color: INK });
-  pdf.text(M + 280, y, `Cash out  GHS ${money(totalOut)}`, { size: 9, color: INK });
-  pdf.text(pdf.w - M, y, `Airtime/bundle  GHS ${money(totalOther)}`, { size: 9, color: INK, align: 'right' });
-  y += 20;
-
-  /* ── optional sections ── */
-  const section = (title) => {
-    room(60);
-    y += 10;
-    pdf.text(M, y + 10, title.toUpperCase(), { size: 10, bold: true, color: GOLD });
+    pdf.text(M, y + 10, `${dayLabel(range.start, { weekday: false })}  to  ${dayLabel(range.end, { weekday: false })}`,
+      { size: 9.5, color: GREY });
+    pdf.text(right, y + 10, `printed ${new Date().toLocaleDateString('en-GB')}`, { size: 8.5, color: FAINT, align: 'right' });
     y += 16;
-    pdf.line(M, y, pdf.w - M, y, { width: 0.6, color: RULE });
-    y += 8;
+    pdf.line(M, y, right, y, { width: 0.8, color: GOLD });
+    y += 24;
   };
-  const kv = (label, value, { bold = false, color = INK } = {}) => {
-    room(14);
-    pdf.text(M, y + 9, label, { size: 8.5, color: DIM });
-    pdf.text(M + 300, y + 9, value, { size: 8.5, bold, color, align: 'right' });
-    y += 13;
+  const room = (need) => {
+    if (y + need < pdf.h - M - 22) return false;
+    pdf.addPage();
+    header();
+    return true;
   };
 
+  header();
+
+  /* ── the days ── */
   const dayKeys = [...new Set([...rows.map((t) => t.day), ...[...days.keys()]])]
-    .filter((d) => d >= range.start && d <= range.end).sort();
+    .filter((d) => d >= range.start && d <= range.end)
+    .sort();
+
   const reportOf = (date) => dayReport({
     day: days.get(date) || { date },
     txs: txs.filter((t) => t.day === date),
@@ -152,125 +72,162 @@ export function buildRegister({
     carried: debtBalances(debtEntries.filter((e) => e.day < date)),
   });
 
-  if (o.balances) {
-    section('Opening and closing balances');
-    const head = ['Date', ...WALLETS.map((w) => WALLET_LABEL[w]), 'Capital'];
-    const colW = [90, 78, 78, 78, 78, 84];
-    const line = (cells, { bold = false, color = INK, size = 8 } = {}) => {
-      room(13);
-      let x = M;
-      cells.forEach((c, i) => {
-        pdf.text(i === 0 ? x : x + colW[i] - 2, y + 9, String(c),
-          { size, bold, color, align: i === 0 ? 'left' : 'right' });
-        x += colW[i];
-      });
-      y += 12;
-    };
-    line(head.map((h) => h.toUpperCase()), { bold: true, color: DIM, size: 7.5 });
-    for (const date of dayKeys) {
-      const r = reportOf(date);
-      if (!r.hasOpening && !r.hasClosing) continue;
-      line([dayLabel(date), ...WALLETS.map((w) => (r.hasOpening ? money(r.opening[w]) : '-')),
-        r.hasOpening ? money(r.expectedCapital) : '-'], { color: DIM });
-      line([' (expected close)', ...WALLETS.map((w) => money(r.expected[w])), money(r.expectedCapital)]);
-      if (r.hasClosing) {
-        line([' (counted)', ...WALLETS.map((w) => money(r.real[w])), money(r.realCapital)], { bold: true });
-        const anyGap = WALLETS.some((w) => Math.abs(r.gap[w]) > 0.004);
-        if (anyGap) {
-          line([' gap', ...WALLETS.map((w) => money(r.gap[w], { sign: true })), money(r.totalGap, { sign: true })],
-            { color: RED });
-        }
-        if (o.extras && r.estimated_extras != null) {
-          line([' extras (estimate)', '', '', '', money(r.estimated_extras), ''], { color: GOLD });
-          line([' residual gap', '', '', '', '', money(r.residualGap, { sign: true })], { color: RED });
-        }
-        for (const h of r.hints) {
-          room(12);
-          pdf.text(M, y + 9, `   check: ${WALLET_LABEL[h.a]} +${money(h.amount)} and ${WALLET_LABEL[h.b]} -${money(h.amount)} — a line may be on the wrong network`,
-            { size: 7.5, color: GOLD });
-          y += 12;
-        }
-      }
-      y += 4;
+  let printed = 0;
+  for (const date of dayKeys) {
+    const lines = rows.filter((t) => t.day === date);
+    if (!lines.length && !o.balances) continue;
+
+    room(70);
+    const live = lines.filter((t) => !t.cancelled).length;
+    pdf.text(M, y + 11, dayLabel(date), { size: 12, bold: true, color: INK });
+    pdf.text(right, y + 11, countLines(live), { size: 9, color: FAINT, align: 'right' });
+    y += 18;
+    pdf.line(M, y, right, y, { width: 0.5, color: FAINT });
+    y += 8;
+
+    for (const t of lines) {
+      room(LINE + 4);
+      printed++;
+      const off = t.cancelled;
+      const colour = off ? RED : INK;
+      pdf.text(COL.number, y + 13, displayNumber(t.customer_number, o.fullNumbers ? 'full' : 'masked') || '—',
+        { size: 11, color: colour, strike: off });
+      pdf.text(COL.network, y + 13, WALLET_LABEL[t.wallet].toLowerCase(), { size: 9, color: off ? RED : GREY });
+      pdf.text(COL.dir, y + 13, DIR[t.type], { size: 10.5, bold: true, color: colour, strike: off });
+      const aside = [t.agent, t.sub_type, t.note].filter(Boolean).join(' · ');
+      if (aside) pdf.text(COL.note, y + 13, pdf.fit(aside, right - COL.note - 100, 8.5), { size: 8.5, color: FAINT });
+      pdf.text(right, y + 13, amt(t.amount), { size: 12, bold: true, color: colour, align: 'right', strike: off });
+      y += LINE;
+    }
+
+    if (o.balances) dayTotals(reportOf(date), date);
+    y += 14;
+  }
+
+  if (!printed) {
+    pdf.text(M, y + 10, 'No lines written in this period.', { size: 10, color: GREY });
+    y += 20;
+  }
+
+  /* ── what each wallet held at the end of that day ── */
+  /* The block written at the foot of a day, the way it is written by hand:
+     one figure a line, the people beside the wallets, the total underlined. */
+  function dayTotals(rep, date) {
+    if (!rep.hasOpening && !rep.hasClosing) return;
+    const bal = debtBalances(debtEntries.filter((e) => e.day <= date));
+    const owing = debtAccounts
+      .map((a) => ({ name: a.name, net: bal.perAccount.get(a.account_id)?.net || 0 }))
+      .filter((p) => Math.abs(p.net) > 0.004);
+    const lines = [
+      ...WALLETS.map((w) => [WALLET_LABEL[w], rep.hasClosing ? rep.real[w] : rep.expected[w]]),
+      ...owing.map((p) => [p.name, p.net]),
+    ];
+    room(lines.length * 17 + 60);
+
+    const boxL = M + (right - M) * 0.46;         // a block, set to the right
+    y += 12;
+    for (const [label, value] of lines) {
+      pdf.text(boxL, y + 11, pdf.fit(label, (right - boxL) * 0.6, 10), { size: 10, color: GREY });
+      pdf.text(right, y + 11, money(value, { sign: value < 0, dp: 0 }), { size: 11, color: INK, align: 'right' });
+      y += 16;
+    }
+    y += 4;
+    pdf.line(boxL, y, right, y, { width: 1, color: INK });
+    y += 6;
+    pdf.text(boxL, y + 12, rep.hasClosing ? 'TOTAL' : 'EXPECTED', { size: 10, bold: true, color: INK });
+    pdf.text(right, y + 12, amt(rep.hasClosing ? rep.realCapital : rep.expectedCapital),
+      { size: 13, bold: true, color: INK, align: 'right' });
+    y += 18;
+    pdf.line(boxL, y, right, y, { width: 0.6, color: INK });
+    y += 10;
+
+    if (rep.hasClosing && Math.abs(rep.totalGap) > 0.004) {
+      const shown = rep.residualGap != null ? rep.residualGap : rep.totalGap;
+      const said = o.extras && rep.estimated_extras != null
+        ? `${money(rep.totalGap, { sign: true, dp: 0 })} against the page, ${amt(rep.estimated_extras)} of it extra fees`
+        : `${money(rep.totalGap, { sign: true, dp: 0 })} against the page`;
+      pdf.text(right, y + 10, said, { size: 9, color: Math.abs(shown) > 0.004 ? RED : GREY, align: 'right' });
+      y += 15;
+    }
+    for (const h of rep.hints) {
+      pdf.text(right, y + 10, `${WALLET_LABEL[h.a]} over, ${WALLET_LABEL[h.b]} short, by ${amt(h.amount)}`,
+        { size: 8.5, color: GOLD, align: 'right' });
+      y += 13;
     }
   }
 
-  if (o.extras && !o.balances) {
-    section('Estimated extra fees collected');
-    let total = 0;
-    for (const date of dayKeys) {
-      const d = days.get(date);
-      if (d?.estimated_extras == null) continue;
-      total += Number(d.estimated_extras);
-      kv(dayLabel(date), `GHS ${money(d.estimated_extras)}`);
-    }
-    kv('Total (agent estimate, not recorded per line)', `GHS ${money(total)}`, { bold: true });
-  }
+  /* ── the closing figures of the whole period ── */
+  const live = rows.filter((t) => !t.cancelled);
+  const totalOf = (...types) => toGhs(sum(live.filter((t) => types.includes(t.type)), (t) => toP(t.amount)));
+  room(60);
+  y += 10;
+  pdf.line(M, y, right, y, { width: 0.8, color: GOLD });
+  y += 18;
+  pdf.text(M, y, countLines(live.length), { size: 11, bold: true, color: INK });
+  pdf.text(right, y, `in ${amt(totalOf('cash_in'))}     out ${amt(totalOf('cash_out'))}     airtime ${amt(totalOf('airtime', 'bundle'))}`,
+    { size: 10.5, color: GREY, align: 'right' });
+  y += 26;
+
+  /* ── optional blocks, each its own checkbox ── */
+  const block = (title) => {
+    room(80);
+    y += 18;
+    pdf.text(M, y + 11, title, { size: 9, bold: true, color: GOLD });
+    y += 18;
+  };
+  const pair = (label, value, { colour = INK, bold = false } = {}) => {
+    room(20);
+    pdf.text(M, y + 11, label, { size: 10, color: GREY });
+    pdf.text(right, y + 11, value, { size: 11, bold, color: colour, align: 'right' });
+    y += 19;
+  };
 
   if (o.debts) {
-    section('Debt accounts');
     const bal = debtBalances(debtEntries.filter((e) => e.day <= range.end));
-    for (const a of debtAccounts) {
-      const b = bal.perAccount.get(a.account_id) || { owed_to_us: 0, we_owe: 0, net: 0 };
-      kv(a.name, `owed to us GHS ${money(b.owed_to_us)}   |   we owe GHS ${money(b.we_owe)}   |   net GHS ${money(b.net, { sign: true })}`);
-    }
-    kv('Total', `owed to us GHS ${money(bal.owed_to_us)}   |   we owe GHS ${money(bal.we_owe)}`, { bold: true });
-    const inRange = debtEntries.filter((e) => e.day >= range.start && e.day <= range.end && (!e.cancelled || o.cancelled));
-    if (inRange.length) {
-      y += 6;
-      for (const e of inRange) {
-        room(12);
-        const acc = debtAccounts.find((a) => a.account_id === e.account_id)?.name || 'account';
-        pdf.text(M, y + 9, `${dayLabel(e.day, { weekday: false })}  ${timeLabel(e.time)}  ${acc}  ${KIND_LABEL[e.kind]}  ${WALLET_LABEL[e.wallet]}`,
-          { size: 8, color: e.cancelled ? RED : INK, strike: e.cancelled });
-        pdf.text(pdf.w - M, y + 9, `GHS ${money(e.amount)}`, { size: 8, bold: true, align: 'right', color: e.cancelled ? RED : INK });
-        y += 12;
-      }
-    }
+    const open = debtAccounts
+      .map((a) => ({ name: a.name, net: bal.perAccount.get(a.account_id)?.net || 0 }))
+      .filter((p) => Math.abs(p.net) > 0.004);
+    block('STILL OWED');
+    if (!open.length) pair('Nobody owes anybody', '—');
+    for (const p of open) pair(`${p.name} — ${p.net > 0 ? 'owes us' : 'we owe'}`, amt(Math.abs(p.net)));
+    pair('In the capital', money(bal.owed_to_us - bal.we_owe, { sign: true, dp: 0 }), { bold: true });
   }
 
   if (o.statistics) {
-    const s = stats({ range, txs, days, debtEntries, commissions });
-    section(`Statistics — ${range.start} to ${range.end}`);
-    kv('Transactions', String(s.count), { bold: true });
-    kv('Total cash in', `GHS ${money(s.cashIn)}`);
-    kv('Total cash out', `GHS ${money(s.cashOut)}`);
-    kv('Airtime', `GHS ${money(s.byType.airtime.total)}  (${s.byType.airtime.count})`);
-    kv('Bundles', `GHS ${money(s.byType.bundle.total)}  (${s.byType.bundle.count})`);
-    kv('Average transaction', `GHS ${money(s.average)}`);
-    kv('Largest transaction', `GHS ${money(s.largest)}`);
-    kv('Busiest weekday', `${s.busiestWeekday.label} (${s.busiestWeekday.count})`);
-    kv('Busiest hour', `${s.busiestHour.label}:00 (${s.busiestHour.count})`);
-    kv('Cancelled lines', `${s.cancelledCount}  (GHS ${money(s.cancelledTotal)})`);
-    kv('Days closed', `${s.daysClosed}`);
-    kv('Days with a gap', `${s.daysWithGap}`);
-    kv('Cumulative unexplained gap', `GHS ${money(s.cumulativeGap, { sign: true })}`,
-      { bold: true, color: Math.abs(s.cumulativeGap) > 0.004 ? RED : INK });
-
+    const amounts = live.map((t) => toP(t.amount)).sort((a, b) => a - b);
+    const volume = toGhs(sum(amounts));
+    block('THE PERIOD IN FIGURES');
+    pair('Volume', amt(volume), { bold: true });
+    pair('Average line', amounts.length ? amt(toGhs(Math.round(volume * 100 / amounts.length))) : '0');
+    pair('Biggest line', amounts.length ? amt(toGhs(amounts[amounts.length - 1])) : '0');
     y += 8;
     for (const w of NETWORKS) {
-      const p = s.perNetwork[w];
-      kv(`${WALLET_LABEL[w]} — volume / net float / share`,
-        `GHS ${money(p.volume)}   |   ${money(p.netFloat, { sign: true })}   |   ${(p.shareVolume * 100).toFixed(1)}%`);
+      const mine = live.filter((t) => t.wallet === w);
+      const volP = sum(mine, (t) => toP(t.amount));
+      const inP = sum(mine.filter((t) => t.type === 'cash_in'), (t) => toP(t.amount));
+      const outP = sum(mine.filter((t) => t.type === 'cash_out'), (t) => toP(t.amount));
+      const airP = sum(mine.filter((t) => t.type === 'airtime' || t.type === 'bundle'), (t) => toP(t.amount));
+      pair(`${WALLET_LABEL[w]} — ${countLines(mine.length)}`,
+        `${amt(toGhs(volP))}     float ${money(toGhs(outP - inP - airP), { sign: true, dp: 0 })}`);
     }
-    if (s.commissionVsVolume.length) {
-      y += 8;
-      for (const m of s.commissionVsVolume) {
-        kv(`Commission ${m.month}`, `GHS ${money(m.commission)} on volume GHS ${money(m.volume)}` +
-          (m.rate != null ? `  (${(m.rate * 100).toFixed(2)}%)` : ''));
+    const months = [...new Set(commissions.map((c) => c.month))].sort();
+    if (months.length) {
+      y += 6;
+      for (const m of months) {
+        pair(`Commission ${m}`, amt(toGhs(sum(commissions.filter((c) => c.month === m), (c) => toP(c.amount)))));
       }
     }
   }
 
-  /* footer on every page */
+  /* ── footer on every page ── */
   const total = pdf.pageCount;
   pdf.pages.forEach((ops, i) => {
     pdf.ops = ops;
-    pdf.line(M, pdf.h - M - 12, pdf.w - M, pdf.h - M - 12, { width: 0.4, color: RULE });
-    pdf.text(M, pdf.h - M, boothName, { size: 7.5, color: DIM });
-    pdf.text(pdf.w / 2, pdf.h - M, `Page ${i + 1} of ${total}`, { size: 7.5, color: DIM, align: 'center' });
-    pdf.text(pdf.w - M, pdf.h - M, o.fullNumbers ? 'full customer numbers' : 'customer numbers masked',
-      { size: 7.5, color: DIM, align: 'right' });
+    pdf.line(M, pdf.h - M - 14, right, pdf.h - M - 14, { width: 0.4, color: FAINT });
+    pdf.text(M, pdf.h - M - 2, boothName, { size: 7.5, color: FAINT });
+    pdf.text(pdf.w / 2, pdf.h - M - 2, `${i + 1} of ${total}`, { size: 7.5, color: FAINT, align: 'center' });
+    pdf.text(right, pdf.h - M - 2, o.fullNumbers ? 'full customer numbers' : 'customer numbers masked',
+      { size: 7.5, color: FAINT, align: 'right' });
   });
 
   return pdf.save();
