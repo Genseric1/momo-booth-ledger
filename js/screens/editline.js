@@ -3,7 +3,7 @@
    correction is a new version, the old one is kept.                          */
 
 import { el, sheet, toast, confirmSheet, closeSheet, fill, amountInput } from '../ui.js';
-import { NETWORKS, WALLET_LABEL, money, timeLabel, groupNumber, normalizeNumber, isCompleteNumber, NUMBER_LENGTH } from '../util.js';
+import { NETWORKS, WALLET_LABEL, money, timeLabel, groupNumber, acceptNumberInput, isCompleteNumber, NUMBER_LENGTH } from '../util.js';
 import * as store from '../store.js';
 
 const TYPES = [['cash_in', 'in'], ['cash_out', 'out'], ['airtime', 'airtime'], ['bundle', 'bundle']];
@@ -18,8 +18,10 @@ export function editLine(tx, ctx) {
         el('input.num', {
           value: groupNumber(st.number), inputmode: 'numeric', maxlength: 12,
           oninput: (e) => {
-            st.number = normalizeNumber(e.target.value).slice(0, NUMBER_LENGTH);
+            const { value, error } = acceptNumberInput(e.target.value, st.number);
+            st.number = value;
             e.target.value = groupNumber(st.number);
+            if (error) toast(error, { error: true });
           },
         })),
       el('div.field',
@@ -40,7 +42,7 @@ export function editLine(tx, ctx) {
         text: 'Save the correction',
         onclick: async () => {
           if (!(Number(st.amount) > 0)) return toast('Amount?', { error: true });
-          if (st.number && !isCompleteNumber(st.number)) return toast(`A Ghana number is ${NUMBER_LENGTH} digits`, { error: true });
+          if (st.number && !isCompleteNumber(st.number)) return toast(`A number is 0 and ${NUMBER_LENGTH - 1} more digits`, { error: true });
           await store.editTx(tx.tx_id, {
             type: st.type, wallet: st.wallet, amount: Number(st.amount), customer_number: st.number,
           });

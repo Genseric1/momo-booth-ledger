@@ -84,9 +84,23 @@ export const parseAmount = (raw) => {
   return t === '' ? '' : t;
 };
 
-/* A Ghana mobile number is exactly ten digits. */
+/* A Ghana mobile number is exactly ten digits and starts with 0. */
 export const NUMBER_LENGTH = 10;
-export const isCompleteNumber = (raw) => normalizeNumber(raw).length === NUMBER_LENGTH;
+export const isCompleteNumber = (raw) => /^0\d{9}$/.test(normalizeNumber(raw));
+
+/* What to keep from what was typed or pasted: digits only, ten of them, and a
+   leading 0. A number written without its 0 — "244 123 456", the way people
+   say it — gets it back; anything else that does not start with 0 is a typo
+   and is refused rather than guessed at. */
+export function acceptNumberInput(raw, previous = '') {
+  let digits = normalizeNumber(raw);
+  if (!digits) return { value: '', error: null };
+  if (digits[0] !== '0') {
+    if (digits.length === 9) digits = '0' + digits;
+    else return { value: previous, error: 'A number starts with 0' };
+  }
+  return { value: digits.slice(0, NUMBER_LENGTH), error: null };
+}
 
 /* 024 412 3456 — the three blocks are what makes a number readable at a glance. */
 export function groupNumber(s) {

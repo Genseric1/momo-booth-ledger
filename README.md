@@ -25,8 +25,10 @@ itself. A line is written exactly as on paper —
 0551234567   mtn    out    150
 ```
 
-— the number, then in or out, then the amount. **The network is read from the
-number while the agent types**, so it is one less thing to think about (it stays
+— the number, then in or out, then the amount. A number is **ten digits and
+starts with 0**: a first digit that is not 0 is refused on the spot, and a
+number read out without its zero ("244 123 456") gets it back. **The network is
+read from the number while the agent types**, so it is one less thing to think about (it stays
 one tap away when the guess is wrong, because numbers are portable).
 
 The pen is one line at the foot of the page: number → `in` / `out` → amount →

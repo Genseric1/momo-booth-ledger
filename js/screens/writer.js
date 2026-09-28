@@ -6,7 +6,7 @@
 import { el, toast } from '../ui.js';
 import {
   WALLET_LABEL, walletFromNumber, groupNumber, groupAmount, parseAmount,
-  normalizeNumber, NUMBER_LENGTH, isCompleteNumber,
+  acceptNumberInput, NUMBER_LENGTH, isCompleteNumber,
 } from '../util.js';
 import * as store from '../store.js';
 
@@ -20,10 +20,12 @@ export function writerBar(ctx) {
     type: 'tel', inputmode: 'numeric', autocomplete: 'off', placeholder: '024 000 0000',
     value: groupNumber(d.number), 'aria-label': 'customer number',
     oninput: (e) => {
-      d.number = normalizeNumber(e.target.value).slice(0, NUMBER_LENGTH);
+      const { value, error } = acceptNumberInput(e.target.value, d.number);
+      d.number = value;
       e.target.value = groupNumber(d.number);
+      if (error) toast(error, { error: true });
       paintNet();
-      if (d.number.length === NUMBER_LENGTH) amount.focus();   // the number is done, move on
+      if (isCompleteNumber(d.number)) amount.focus();          // the number is done, move on
     },
     onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); amount.focus(); } },
   });
@@ -71,7 +73,7 @@ export function writerBar(ctx) {
     if (!(value > 0)) { amount.focus(); return toast('Write the amount', { error: true }); }
     if (d.number && !isCompleteNumber(d.number)) {
       number.focus();
-      return toast(`A Ghana number is ${NUMBER_LENGTH} digits — this one has ${d.number.length}`, { error: true });
+      return toast(`A number is 0 and ${NUMBER_LENGTH - 1} more digits — this one has ${d.number.length}`, { error: true });
     }
     const wallet = d.wallet || walletFromNumber(d.number);
     if (!wallet) { cycleNet(); return toast('Which network?', { error: true }); }
