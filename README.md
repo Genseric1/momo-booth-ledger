@@ -1,0 +1,145 @@
+# MoMo Booth Ledger — v1
+
+Replaces the paper notebook of a mobile money booth in Ghana (MTN MoMo, Telecel
+Cash, AT Money and physical cash). Built for the PACSBI Limited pilot: one booth,
+one shared till, several agents.
+
+Installable PWA, offline-first, no build step and no runtime dependency.
+
+```bash
+npm start          # http://localhost:8787
+npm test           # the acceptance tests from the specification
+npm run icons      # regenerate the app icons
+```
+
+A service worker needs `http://localhost` or HTTPS — opening `index.html` from
+the file system will not work.
+
+## What it looks like
+
+One screen: the page of the notebook, and under it the totals block that writes
+itself. A line is written exactly as on paper —
+
+```
+0244123456   mtn    in     400
+0551234567   mtn    out    150
+```
+
+— the number, then in or out, then the amount. **The network is read from the
+number while the agent types**, so it is one less thing to think about (it stays
+one tap away when the guess is wrong, because numbers are portable).
+
+The pen is the bottom of the screen: number → `in` / `out` → amount → ✓.
+`airtime` and `bundle` sit next to in/out for the rarer lines. Nothing else is
+on the page. Everything else — morning count, evening count, debts, statistics,
+export, settings — lives behind the single ☰ button.
+
+Entry speed is the success criterion. If writing a line here is slower than
+writing it in the notebook, agents go back to paper.
+
+## How the numbers work
+
+For each non-cancelled transaction of amount A on network W:
+
+| Type | W float | Cash |
+|---|---|---|
+| cash in | −A | +A |
+| cash out | +A | −A |
+| airtime | −A | +A |
+| bundle | −A | +A |
+
+* Expected closing = opening + everything above.
+* Capital = MTN + Telecel + AT + cash + owed to us − we owe.
+* **Gap = counted − expected**, per network and on the capital.
+* With an extras estimate: **residual gap = gap − extras**.
+
+The app never decides whether a gap is a mistake or a fee the agent charged on
+top — it shows both numbers and lets the agent explain. When two networks are
+off by the same amount in opposite directions, it says so: a line was probably
+entered on the wrong network.
+
+Commissions are paid by the networks at month end into separate accounts. They
+are recorded for statistics only and never enter a daily total.
+
+## Offline and sync
+
+Every write goes to IndexedDB first and returns immediately; nothing waits for
+the network. Records are **never overwritten**: an edit or a cancellation is a
+new version with its own client-generated uuid and timestamp, and the newest
+version of an entity wins (the uuid breaks ties, so every device projects the
+same state). Two devices can write offline all day and sync in any order
+without duplicating or losing a line.
+
+Sync is optional. Without a backend the app is a complete local register.
+
+### Supabase
+
+1. Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor.
+2. Create the booth row and add each agent's account to `booth_members`.
+3. In **Settings → Sync**, paste the project URL, the anon key and the booth id,
+   then sign in.
+
+Row Level Security enforces the isolation: a signed-in user only sees the rows
+of a booth they belong to, and rows can only be inserted, never updated or
+deleted — the register stays auditable. Any backend offering the same two
+operations (push versions by uuid, pull versions after a cursor) can replace it;
+see `js/sync.js`.
+
+## Privacy
+
+* The page shows the **whole customer number**, as the paper notebook does.
+  Settings offer masked (`0244***123`), last four digits, or not storing them at
+  all. The exported PDF masks them by default whatever the screen shows.
+* Stored numbers are encrypted on the device with AES-GCM under a key derived
+  from the booth PIN (PBKDF2), and stay encrypted when they sync — the server
+  holds ciphertext only. Changing the PIN re-encrypts them and pushes new
+  versions so the booth's other devices keep reading them.
+* Numbers are never sent to analytics or logs, and never put in a URL.
+* The PDF can be password-protected (PDF standard security handler, RC4-40).
+  That keeps a casual reader out of a file sent over WhatsApp; it is not strong
+  cryptography.
+
+> **Before real customer numbers go on a server**, confirm the obligations under
+> Ghana's Data Protection Act 2012 (Act 843), including registration with the
+> Data Protection Commission, and whether the booth is controller or processor.
+> This has not been verified — it is still open in §12 of the specification.
+
+## Layout
+
+```
+index.html          shell            sw.js               offline cache
+css/app.css         the paper look   manifest.webmanifest install metadata
+js/util.js          money, dates, Ghana prefixes, masking
+js/calc.js          the calculation rules  (pure, what the tests run against)
+js/stats.js         the statistics         (pure)
+js/db.js            IndexedDB version log
+js/store.js         projection + mutations
+js/sync.js          Supabase REST push/pull
+js/crypto.js        PIN-derived field encryption
+js/pdf.js           minimal PDF writer      js/pdfcrypt.js  MD5 + RC4
+js/report.js        the register layout
+js/ui.js            tiny DOM toolkit
+js/screens/page.js     the notebook page + the totals block
+js/screens/writer.js   the pen: number, in/out, amount
+js/screens/counts.js   morning and evening count, and the verdict
+js/screens/editline.js striking out and correcting a line
+js/screens/menu.js     everything that is not the page
+js/screens/         debts, statistics, exportpdf, settings, lock
+tests/              the specification's acceptance tests
+tools/make-icons.mjs generates the PNG icons
+```
+
+`sample-register.pdf` is an example of the exported register.
+
+## Not in v1
+
+Photo or OCR of transaction IDs, viewer accounts for bosses, several booths
+under one owner, automatic reading of confirmation SMS. The data model leaves
+room for all of them.
+
+## Still to confirm with the pilot booth
+
+* Whether agents accept the entry speed during a queue.
+* Whether the tax authority wants the notebook itself or accepts this register.
+* The exact fields on each network's agent statement (only MTN's was checked).
+* The booth's legal status under Act 843.

@@ -1,0 +1,123 @@
+/* ═══════════════ MORNING AND EVENING COUNT ═══════════════
+   Four numbers in the morning, four at night. At night the page says in one
+   sentence whether it falls right, and never decides for the agent whether a
+   difference is a mistake or a fee they charged on top.                      */
+
+import { el, toast, fill, amountInput } from '../ui.js';
+import { WALLETS, WALLET_LABEL, money, dayLabel, addDays } from '../util.js';
+import * as store from '../store.js';
+import { reportFor } from './page.js';
+
+export function morningScreen(ctx) {
+  const rep = reportFor(ctx.date);
+  const prev = reportFor(addDays(ctx.date, -1));
+  const vals = { ...(rep.hasOpening ? rep.opening : {}) };
+
+  const fields = WALLETS.map((w) => el('div.field',
+    el('label', { text: w === 'CASH' ? 'Cash in the box' : `${WALLET_LABEL[w]} float` }),
+    amountInput({ value: vals[w] ?? '', oninput: (v) => { vals[w] = v; } })));
+
+  return el('div.sheetview',
+    el('h2', { text: `Morning — ${dayLabel(ctx.date, { weekday: false })}` }),
+    el('p.lead', { text: 'What is really in each wallet and in the box, before the first customer.' }),
+    prev.hasClosing ? el('button.big.quiet', {
+      text: `Take yesterday's evening count (${money(prev.realCapital, { dp: 0 })})`,
+      style: { marginBottom: '18px' },
+      onclick: () => {
+        WALLETS.forEach((w, i) => {
+          const input = fields[i].querySelector('input');
+          input.value = money(prev.real[w], { dp: 0 });
+          vals[w] = String(prev.real[w]);
+        });
+        toast('Copied — check it before saving');
+      },
+    }) : null,
+    ...fields,
+    el('button.big', {
+      text: 'Save the morning count',
+      onclick: async () => { await store.setOpening(ctx.date, vals, ctx.agent); toast('Morning saved'); ctx.go('page'); },
+    }));
+}
+
+export function eveningScreen(ctx) {
+  const rep = reportFor(ctx.date);
+  const vals = { ...(rep.hasClosing ? rep.real : {}) };
+  let extras = rep.estimated_extras ?? '';
+  const out = el('div.sheetview');
+
+  const render = () => {
+    const fields = WALLETS.map((w) => el('div.field',
+      el('label', { text: w === 'CASH' ? 'Cash in the box' : `${WALLET_LABEL[w]} float` },
+      ),
+      amountInput({
+        value: vals[w] ?? '', placeholder: money(rep.expected[w], { dp: 0 }),
+        oninput: (v) => { vals[w] = v; },
+      }),
+      el('div.hint', { text: `the page says ${money(rep.expected[w], { dp: 0 })}` })));
+
+    fill(out, 
+      el('h2', { text: `Evening — ${dayLabel(ctx.date, { weekday: false })}` }),
+      el('p.lead', { text: 'Count for real. This is the number that matters.' }),
+      ...fields,
+      el('div.field',
+        el('label', { text: 'Extra fees you collected today (if you know)' }),
+        amountInput({ value: extras, placeholder: 'optional', oninput: (v) => { extras = v; } }),
+        el('div.hint', { text: 'What customers pay you on top is not written line by line, so the page cannot know it.' })),
+      el('button.big', {
+        text: 'Save the evening count',
+        onclick: async () => {
+          await store.setClosing(ctx.date, vals, extras === '' ? null : Number(extras), ctx.agent);
+          toast('Evening saved');
+          ctx.refresh();
+        },
+      }),
+      rep.hasClosing ? verdict(rep, ctx) : null);
+  };
+  render();
+  return out;
+}
+
+/* One sentence first, the four numbers after — not a table to decode. */
+function verdict(rep, ctx) {
+  const gap = rep.totalGap;
+  const residual = rep.residualGap;
+  const shown = residual != null ? residual : gap;
+  const exact = Math.abs(shown) < 0.005;
+
+  const rows = el('div.rows', WALLETS.map((w) => el('div.r',
+    el('div', { text: WALLET_LABEL[w] }, el('small', { text: `page ${money(rep.expected[w], { dp: 0 })}` })),
+    el('div.sp'),
+    el('div.v.num', { text: money(rep.real[w], { dp: 0 }) }),
+    el('div.v.num', {
+      class: Math.abs(rep.gap[w]) < 0.005 ? '' : rep.gap[w] > 0 ? 'pos' : 'neg',
+      style: { width: '86px', textAlign: 'right' },
+      text: Math.abs(rep.gap[w]) < 0.005 ? '—' : money(rep.gap[w], { sign: true, dp: 0 }),
+    }))));
+
+  return el('div', { style: { marginTop: '26px' } },
+    el('h2', { text: exact ? 'It falls right.' : shown > 0 ? `You have ${money(Math.abs(shown), { dp: 0 })} more` : `${money(Math.abs(shown), { dp: 0 })} is missing` }),
+    el('p.lead', {
+      text: exact
+        ? 'The page and the money agree.'
+        : residual != null
+          ? `After your ${money(rep.estimated_extras, { dp: 0 })} of extra fees, this much is still unexplained.`
+          : 'A difference is not always a mistake: the fees you charge on top are not written line by line. Write your estimate above and it will be taken off.',
+    }),
+    rows,
+    exact && WALLETS.some((w) => Math.abs(rep.gap[w]) > 0.005)
+      ? el('p.note', { text: 'The total is right but the networks do not match one by one — some lines were probably written on the wrong network.' })
+      : null,
+    ...rep.hints.map((h) => el('p.note', {
+      text: `${WALLET_LABEL[h.a]} is ${money(h.amount, { dp: 0 })} over and ${WALLET_LABEL[h.b]} is ${money(h.amount, { dp: 0 })} short — a line of ${money(h.amount, { dp: 0 })} was probably written on the wrong network.`,
+    })),
+    el('button.big.quiet', {
+      text: rep.closed ? 'Reopen the day' : 'Close the day',
+      style: { marginTop: '18px' },
+      onclick: async () => {
+        rep.closed ? await store.reopenDay(ctx.date) : await store.closeDay(ctx.date);
+        toast(rep.closed ? 'Day reopened' : 'Day closed');
+        ctx.refresh();
+      },
+    }),
+    el('button.big.quiet', { text: 'Back to the page', style: { marginTop: '8px' }, onclick: () => ctx.go('page') }));
+}

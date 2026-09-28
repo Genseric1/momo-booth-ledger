@@ -1,0 +1,109 @@
+/* ═══════════════ APP ═══════════════
+   One page, one pen, one menu button. Everything else is behind the menu.    */
+
+import { el, clear, toast } from './ui.js';
+import { today, dayLabel, addDays } from './util.js';
+import * as store from './store.js';
+import * as sync from './sync.js';
+import { lockScreen } from './screens/lock.js';
+import { pageScreen } from './screens/page.js';
+import { writerBar, emptyDraft, unbindKeyboard } from './screens/writer.js';
+import { morningScreen, eveningScreen } from './screens/counts.js';
+import { menuScreen } from './screens/menu.js';
+import { debtsScreen } from './screens/debts.js';
+import { statsScreen } from './screens/statistics.js';
+import { exportScreen, initialExportState } from './screens/exportpdf.js';
+import { settingsScreen } from './screens/settings.js';
+
+const SCREENS = {
+  page: pageScreen, menu: menuScreen, morning: morningScreen, evening: eveningScreen,
+  debts: debtsScreen, stats: statsScreen, export: exportScreen, settings: settingsScreen,
+};
+const TITLE = { menu: 'Menu', morning: 'Morning', evening: 'Evening', debts: 'Debts',
+  stats: 'Statistics', export: 'Export', settings: 'Settings' };
+
+const ctx = {
+  view: 'page',
+  date: today(),
+  agent: null,
+  draft: emptyDraft(),
+  statsPreset: 'week',
+  statsCustom: {},
+  exportState: initialExportState(),
+  go: (view) => { ctx.view = view; render(); scrollTop(); },
+  setDate: (d) => { ctx.date = d; render(); },
+  refresh: (opts) => render(opts),
+  setStatsPreset: (p) => { ctx.statsPreset = p; render(); },
+  setStatsCustom: (c) => { ctx.statsCustom = c; render(); },
+};
+
+const root = document.getElementById('app');
+const scrollTop = () => scrollTo({ top: 0 });
+
+function render({ flash = false } = {}) {
+  if (!store.state.ready) return;
+  const onPage = ctx.view === 'page';
+  clear(root);
+  unbindKeyboard();
+  root.append(bar(onPage), SCREENS[ctx.view](ctx));
+  if (onPage) {
+    root.append(writerBar(ctx));
+    if (flash) for (const t of root.querySelectorAll('.totals')) t.classList.add('flash');
+    scrollTo({ top: document.body.scrollHeight });
+  }
+  paintSync();
+}
+
+function bar(onPage) {
+  const isToday = ctx.date === today();
+  return el('div.bar',
+    onPage ? null : el('button', { text: '‹', title: 'back', onclick: () => ctx.go('page') }),
+    el('div',
+      el('div.date', { text: onPage ? dayLabel(ctx.date) : TITLE[ctx.view] }),
+      onPage ? el('div.state', { text: isToday ? 'today' : 'another day' }) : null),
+    el('div.sp'),
+    onPage ? el('button', { text: '‹', title: 'day before', onclick: () => ctx.setDate(addDays(ctx.date, -1)) }) : null,
+    onPage && !isToday ? el('button', { text: '›', title: 'day after', onclick: () => ctx.setDate(addDays(ctx.date, 1)) }) : null,
+    onPage ? el('button', { text: '☰', title: 'menu', onclick: () => ctx.go('menu') }) : null,
+  );
+}
+
+function paintSync() {
+  const s = sync.status;
+  const state = root.querySelector('.bar .state');
+  if (!state || ctx.view !== 'page') return;
+  if (!s.configured) return;                       // no backend: nothing to say
+  if (!s.online) state.textContent = `offline · ${s.pendingCount} kept here`;
+  else if (s.busy) state.textContent = 'sending…';
+  else if (s.pendingCount) state.textContent = `${s.pendingCount} to send`;
+}
+
+async function boot() {
+  /* In a sandboxed frame the getter itself can throw, so this stays guarded. */
+  try { navigator.serviceWorker?.register('sw.js').catch(() => {}); } catch { /* no offline cache here */ }
+  await store.init();
+  await lockScreen(root);
+  await sync.init();
+  store.onSyncNeeded(sync.sync);
+  sync.subscribe(paintSync);
+  sync.startAutoSync();
+  render();
+  sync.sync();
+
+  let shownToday = today();
+  setInterval(() => {
+    const now = today();
+    if (now === shownToday) return;
+    if (ctx.date === shownToday) ctx.setDate(now);
+    shownToday = now;
+  }, 60000);
+
+  addEventListener('online', () => toast('Back online'));
+}
+
+boot().catch((e) => {
+  root.replaceChildren(el('div.sheetview',
+    el('h2', { text: 'The page could not open' }),
+    el('p.lead', { text: e.message }),
+    el('p.note', { text: 'Storage may be blocked (private window). Lines need it to be safe.' })));
+});

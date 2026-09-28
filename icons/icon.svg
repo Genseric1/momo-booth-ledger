@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MoMo Booth Ledger">
+  <rect x="26" y="26" width="460" height="460" rx="104" fill="#F7F4EA"/>
+  <g stroke="#DFD8C4" stroke-width="3">
+    <path d="M72 84h368M72 142h368M72 200h368M72 258h368M72 316h368M72 374h368M72 432h368"/>
+  </g>
+  <path d="M126 62v388" stroke="#D98A80" stroke-width="4"/>
+  <path d="M170 355V160h30l56 96 56-96h30v195" fill="none" stroke="#A8801F" stroke-width="40"
+        stroke-linejoin="round" stroke-linecap="butt"/>
+  <rect x="170" y="372" width="172" height="14" rx="3" fill="#16263B"/>
+</svg>
