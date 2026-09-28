@@ -72,18 +72,42 @@ without duplicating or losing a line.
 
 Sync is optional. Without a backend the app is a complete local register.
 
-### Supabase
+### Supabase, and accounts
 
-1. Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor.
-2. Create the booth row and add each agent's account to `booth_members`.
-3. In **Settings → Sync**, paste the project URL, the anon key and the booth id,
-   then sign in.
+1. Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor, then
+   follow the comments at the end of that file: create the booth row, create
+   each account yourself in **Authentication → Users**, and give it a role in
+   `booth_members` (`manager`, `agent` or `viewer`).
+2. Turn off public sign-ups — Authentication → Providers → Email → *Enable sign
+   ups* off — so the link alone cannot create an account.
+3. Put the project URL, the anon key and the booth id in
+   [`js/config.js`](js/config.js) and publish. No agent ever types them.
 
-Row Level Security enforces the isolation: a signed-in user only sees the rows
-of a booth they belong to, and rows can only be inserted, never updated or
-deleted — the register stays auditable. Any backend offering the same two
-operations (push versions by uuid, pull versions after a cursor) can replace it;
-see `js/sync.js`.
+`config.requireAccount` decides how the page opens:
+
+| | |
+|---|---|
+| `config` empty | A local notebook on the device. No account, no server. |
+| filled, `requireAccount: false` | Anyone with the link uses it; signing in adds sync. |
+| filled, `requireAccount: true` | No account, no page. |
+
+**The account is asked once.** After that the session is kept on the device and
+the page opens with the PIN alone — with or without network. An account gate
+that locks an agent out the day the network drops would be worse than the paper
+it replaces.
+
+Roles are enforced by the database, not the app: reading takes membership,
+writing takes a role that may write, so a boss can be given a `viewer` account
+that physically cannot touch the register. Rows can only ever be inserted, never
+updated or deleted — the register stays auditable.
+
+**Joining a booth later is safe.** Lines written before the device had a booth
+are stamped with the real booth id on their way up, and their customer numbers
+are re-encrypted under the new key when the PIN is next entered. A day written
+before the account existed is not lost.
+
+Any backend offering the same two operations (push versions by uuid, pull
+versions after a cursor) can replace Supabase; see `js/sync.js`.
 
 ## Privacy
 
