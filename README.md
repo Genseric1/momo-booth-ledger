@@ -29,10 +29,15 @@ itself. A line is written exactly as on paper —
 number while the agent types**, so it is one less thing to think about (it stays
 one tap away when the guess is wrong, because numbers are portable).
 
-The pen is the bottom of the screen: number → `in` / `out` → amount → ✓.
-`airtime` and `bundle` sit next to in/out for the rarer lines. Nothing else is
-on the page. Everything else — morning count, evening count, debts, statistics,
-export, settings — lives behind the single ☰ button.
+The pen is one line at the foot of the page: number → `in` / `out` → amount →
+✓, typed on the phone's own keyboard (or a PC's — Tab and Enter work). Ten
+digits jump straight to the amount, and after a line is written the cursor comes
+back ready for the next one. `airtime` and `bundle` sit under it for the rarer
+lines.
+
+Above the page, one quiet line says where each wallet stands. Everything else —
+morning count, evening count, debts, statistics, export, settings — lives behind
+the single ☰ button, so the list of the day keeps the whole screen.
 
 Entry speed is the success criterion. If writing a line here is slower than
 writing it in the notebook, agents go back to paper.

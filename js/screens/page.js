@@ -38,16 +38,27 @@ export function pageScreen(ctx) {
 
   return el('div.book',
     el('div', { class: 'left' },
-      el('div.sheetpage', lines),
-      totalsBlock(rep, ctx, 'phone')),
-    el('div', { class: 'right' }, totalsBlock(rep, ctx, 'pc')),
+      strip(rep, ctx),
+      el('div.sheetpage', lines)),
+    el('div', { class: 'right' }, totalsBlock(rep, ctx)),
   );
 }
 
-/* The block written at the foot of the page: each network, then the total. */
-function totalsBlock(rep, ctx, where) {
+/* One quiet line under the date: where each wallet stands right now. It is the
+   number the agent glances at before saying yes to a big cash-out. */
+function strip(rep, ctx) {
+  const cell = (k, v, big = false) => el(`div.cell${big ? '.tot' : ''}`,
+    el('div.k', { text: k }),
+    el('div.v.num', { text: money(v, { dp: 0 }) }));
+  return el('div.strip', { onclick: () => ctx.go('evening'), title: 'the evening count' },
+    ...WALLETS.map((w) => cell(WALLET_LABEL[w], rep.hasOpening ? rep.expected[w] : rep.movement[w])),
+    cell('total', rep.hasOpening ? rep.expectedCapital : 0, true));
+}
+
+/* The block written at the foot of the facing page, where there is room for it. */
+function totalsBlock(rep, ctx) {
   const b = (w) => rep.hasOpening ? rep.expected[w] : rep.movement[w];
-  return el(`div.totals${where === 'pc' ? '' : '.on-phone'}`,
+  return el('div.totals',
     ...WALLETS.map((w) => el('div.t',
       el('div.k', { text: WALLET_LABEL[w] }),
       el('div.d.num', { text: rep.movement[w] ? money(rep.movement[w], { sign: true, dp: 0 }) : '' }),

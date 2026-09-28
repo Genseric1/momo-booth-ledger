@@ -7,7 +7,7 @@ import * as store from './store.js';
 import * as sync from './sync.js';
 import { lockScreen } from './screens/lock.js';
 import { pageScreen } from './screens/page.js';
-import { writerBar, emptyDraft, unbindKeyboard } from './screens/writer.js';
+import { writerBar, emptyDraft } from './screens/writer.js';
 import { morningScreen, eveningScreen } from './screens/counts.js';
 import { menuScreen } from './screens/menu.js';
 import { debtsScreen } from './screens/debts.js';
@@ -40,16 +40,17 @@ const ctx = {
 const root = document.getElementById('app');
 const scrollTop = () => scrollTo({ top: 0 });
 
-function render({ flash = false } = {}) {
+function render({ flash = false, focus = false } = {}) {
   if (!store.state.ready) return;
   const onPage = ctx.view === 'page';
   clear(root);
-  unbindKeyboard();
   root.append(bar(onPage), SCREENS[ctx.view](ctx));
   if (onPage) {
-    root.append(writerBar(ctx));
-    if (flash) for (const t of root.querySelectorAll('.totals')) t.classList.add('flash');
+    const pen = writerBar(ctx);
+    root.append(pen);
+    if (flash) for (const t of root.querySelectorAll('.strip, .totals')) t.classList.add('flash');
     scrollTo({ top: document.body.scrollHeight });
+    if (focus) pen.focusPen();            // keep writing without reaching for the field
   }
   paintSync();
 }

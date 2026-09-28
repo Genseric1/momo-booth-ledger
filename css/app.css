@@ -65,37 +65,38 @@ input,select,textarea { font:inherit; color:inherit; }
 .flash { animation:flash .8s ease-out; }
 @keyframes flash { from { background:#FFF4CE; } to { background:transparent; } }
 
-/* ── on écrit ici : numéro → in/out → montant → ✓ ── */
+/* ── the strip: where each wallet stands, one glance, one line ── */
+.strip { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; width:100%;
+  padding:7px 12px 8px; background:var(--paper2); border-bottom:1px solid var(--rule);
+  position:sticky; top:0; z-index:15; text-align:left; }
+.strip .cell { min-width:0; }
+.strip .k { font-size:9.5px; letter-spacing:.6px; text-transform:uppercase; color:var(--faint); font-weight:700; }
+.strip .v { font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.strip .tot .k { color:var(--gold); }
+.strip .tot .v { font-size:15px; }
+
+/* ── the pen: one line, the phone's own keyboard ── */
 .writer { position:sticky; bottom:0; z-index:25; background:var(--paper2);
-  border-top:1px solid var(--rule); padding:8px 12px calc(8px + env(safe-area-inset-bottom)); }
-.draft { display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px;
-  padding:4px 4px 8px; border-bottom:1px solid var(--rule2); margin-bottom:8px; }
-.draft .f { font-size:22px; font-weight:700; letter-spacing:.5px; color:var(--ink); min-height:28px; }
-.draft .f.empty { color:var(--faint); font-weight:400; font-size:17px; }
-.draft .f.on::after { content:'|'; color:var(--gold); animation:blink 1s steps(2) infinite; font-weight:400; }
-@keyframes blink { 50% { opacity:0; } }
-.draft .dir { font-size:16px; font-weight:800; }
-.draft .dir.in { color:var(--in); } .draft .dir.out { color:var(--out); } .draft .dir.other { color:var(--gold); }
-.draft .amt { font-size:24px; font-weight:800; min-width:70px; text-align:right; }
-.draft .net { font-size:11.5px; color:var(--faint); font-weight:600; }
-
-.dirs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
-.dirs button { min-height:48px; border-radius:10px; font-size:19px; font-weight:800;
+  border-top:1px solid var(--rule); padding:7px 10px calc(7px + env(safe-area-inset-bottom)); }
+.pen { display:grid; grid-template-columns:1fr auto 88px 44px; align-items:center; gap:6px; }
+.pen input { border:none; background:transparent; padding:9px 2px; font-size:16px; font-weight:600;
+  outline:none; border-bottom:1.5px solid var(--rule); min-width:0; }
+.pen input:focus { border-color:var(--gold); }
+.pen input::placeholder { color:var(--faint); font-weight:400; }
+.pen-amt { text-align:right; }
+.pen-dirs { display:flex; gap:4px; }
+.pen-dirs button { padding:8px 9px; border-radius:8px; font-size:14px; font-weight:800;
   border:1.5px solid var(--rule); background:var(--paper); }
-.dirs button.in { color:var(--in); } .dirs button.out { color:var(--out); }
-.dirs button.on.in { background:#E8F5EE; border-color:var(--in); }
-.dirs button.on.out { background:#FBEFE7; border-color:var(--out); }
-.dirs button.done { background:var(--ink); color:#fff; border-color:var(--ink); grid-column:1/-1; }
-.extras { display:flex; gap:14px; justify-content:center; margin-bottom:8px; }
-.extras button { font-size:13px; color:var(--faint); font-weight:700; padding:4px 8px; }
-.extras button.on { color:var(--gold); text-decoration:underline; }
-
-.keys { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
-.keys button { min-height:46px; border-radius:10px; font-size:22px; font-weight:700;
-  background:var(--paper); border:1px solid var(--rule); }
-.keys button:active { background:#EFF4FC; }
-.keys button.ok { background:var(--ink); color:#fff; border-color:var(--ink); font-size:20px; }
-.keys button.ok[disabled] { opacity:.35; }
+.pen-dirs button.in { color:var(--in); } .pen-dirs button.out { color:var(--out); }
+.pen-dirs button.in.on { background:#E8F5EE; border-color:var(--in); }
+.pen-dirs button.out.on { background:#FBEFE7; border-color:var(--out); }
+.pen-ok { width:44px; height:42px; border-radius:9px; background:var(--ink); color:#fff; font-size:18px; }
+.pen-row2 { display:flex; gap:12px; align-items:center; padding:5px 2px 0; }
+.pen-net { font-size:12px; font-weight:700; color:var(--ink2); padding:3px 7px; border-radius:6px;
+  border:1px solid var(--rule); }
+.pen-net.guessed { color:var(--gold); border-color:transparent; padding-left:2px; }
+.pen-more { font-size:12px; color:var(--faint); font-weight:700; padding:3px 4px; }
+.pen-more.on { color:var(--gold); text-decoration:underline; }
 
 /* ── pages secondaires (menu, comptes, stats…) : du texte sur du papier ── */
 .sheetview { padding:14px 16px 40px; max-width:720px; margin:0 auto; }
@@ -151,7 +152,10 @@ svg.spark { width:100%; height:110px; display:block; }
 .lock .dots { display:flex; gap:11px; margin:18px 0 14px; }
 .lock .dots i { width:12px; height:12px; border-radius:50%; background:var(--rule); }
 .lock .dots i.on { background:var(--gold); }
-.lock .keys { width:100%; }
+.lock .keys { width:100%; display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+.lock .keys button { min-height:52px; border-radius:10px; font-size:22px; font-weight:700;
+  background:var(--paper); border:1px solid var(--rule); }
+.lock .keys button:active { background:#EFF4FC; }
 .lock .field { width:100%; }
 
 /* ── sur PC : la page à gauche, les totaux sur la page d'en face ── */
@@ -187,14 +191,9 @@ svg.spark { width:100%; height:110px; display:block; }
 .sheet .hd .spacer { flex:1; }
 .x { width:36px; height:36px; border-radius:9px; font-size:16px; color:var(--faint); border:1px solid var(--rule); }
 
-.kbhint { display:none; }
-@media (hover:hover) and (pointer:fine) {
-  .kbhint { display:block; text-align:center; font-size:11.5px; color:var(--faint); margin-top:8px; }
-}
-
-/* the totals block lives under the page on a phone, on the facing page on a PC */
+/* the strip carries the phone; the facing page carries the full block on a PC */
 .book > .right { display:none; }
 @media (min-width:900px) {
   .book > .right { display:block; }
-  .totals.on-phone { display:none; }
+  .strip { display:none; }
 }
