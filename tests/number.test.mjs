@@ -31,7 +31,7 @@ test('what is typed is cleaned, and a first digit other than 0 is refused', () =
 
 test('the number drives the display and the network guess', () => {
   assert.equal(formatNumber('0244123456'), '024 412 3456');
-  assert.equal(maskNumber('0244123456'), '024 4** *456');
+  assert.equal(maskNumber('0244123456'), '024 *** 3456', 'the middle block goes, the groups stay whole');
   assert.equal(walletFromNumber('0244123456'), 'MTN');
   assert.equal(walletFromNumber('0201112222'), 'TELECEL');
   assert.equal(walletFromNumber('0271112222'), 'AT');

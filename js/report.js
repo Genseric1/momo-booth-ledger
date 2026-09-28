@@ -94,7 +94,7 @@ export function buildRegister({
         { size: 11, color: colour, strike: off });
       pdf.text(COL.network, y + 13, WALLET_LABEL[t.wallet].toLowerCase(), { size: 9, color: off ? RED : GREY });
       pdf.text(COL.dir, y + 13, DIR[t.type], { size: 10.5, bold: true, color: colour, strike: off });
-      const aside = [t.agent, t.sub_type, t.note].filter(Boolean).join(' · ');
+      const aside = [t.agent, t.sub_type, t.note].filter(Boolean).join(' - ');
       if (aside) pdf.text(COL.note, y + 13, pdf.fit(aside, right - COL.note - 100, 8.5), { size: 8.5, color: FAINT });
       pdf.text(right, y + 13, amt(t.amount), { size: 12, bold: true, color: colour, align: 'right', strike: off });
       y += LINE;
@@ -122,10 +122,15 @@ export function buildRegister({
       ...WALLETS.map((w) => [WALLET_LABEL[w], rep.hasClosing ? rep.real[w] : rep.expected[w]]),
       ...owing.map((p) => [p.name, p.net]),
     ];
-    room(lines.length * 17 + 60);
+    /* if the block cannot follow its own lines, it says which day it closes */
+    const broke = room(lines.length * 17 + 60);
 
     const boxL = M + (right - M) * 0.46;         // a block, set to the right
     y += 12;
+    if (broke) {
+      pdf.text(boxL, y + 10, `${dayLabel(date)} — closing`, { size: 9.5, color: GREY });
+      y += 18;
+    }
     for (const [label, value] of lines) {
       pdf.text(boxL, y + 11, pdf.fit(label, (right - boxL) * 0.6, 10), { size: 10, color: GREY });
       pdf.text(right, y + 11, money(value, { sign: value < 0, dp: 0 }), { size: 11, color: INK, align: 'right' });

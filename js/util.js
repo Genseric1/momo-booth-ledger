@@ -109,12 +109,13 @@ export function groupNumber(s) {
 }
 export const formatNumber = (raw) => groupNumber(normalizeNumber(raw).slice(0, NUMBER_LENGTH));
 
-/* 0244123456 -> 024 4** *456 ; enough to recognise a regular customer, not enough to dial. */
+/* 0244123456 -> 024 *** 3456. The middle block is the one that goes, so the
+   three groups stay whole and the number is still read at a glance. */
 export function maskNumber(raw) {
   const n = normalizeNumber(raw);
   if (!n) return '';
-  if (n.length <= 7) return groupNumber(n.slice(0, 2) + '***' + n.slice(-2));
-  return groupNumber(n.slice(0, 4) + '***' + n.slice(-3));
+  if (n.length < 7) return n.slice(0, 2) + '***';
+  return `${n.slice(0, 3)} *** ${n.slice(-4)}`;
 }
 export const last4 = (raw) => { const n = normalizeNumber(raw); return n ? '***' + n.slice(-4) : ''; };
 
