@@ -4,7 +4,6 @@ import { el, card, sheet, toast, chipRow, confirmSheet, tile } from '../ui.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import * as DB from '../db.js';
-import { pinHash, unlock } from '../crypto.js';
 import { hasBackend, needsAccount, CONFIG } from '../config.js';
 
 const NUMBER_MODES = [
@@ -42,7 +41,7 @@ export function settingsScreen(ctx) {
           : s.numberStorage === 'last4' ? 'Only the last four digits are kept.'
           : s.numberStorage === 'full' ? 'Full numbers are kept and shown. Check your obligations under Ghana’s Data Protection Act 2012 (Act 843) before doing this on a server.'
           : 'Numbers are stored but displayed masked (0244***123).' }),
-        el('p.note', { style: { marginTop: '8px' }, text: 'Stored numbers are encrypted on this device with a key derived from the booth PIN, and stay encrypted when they sync. They are never sent to any analytics.' }),
+        el('p.note', { style: { marginTop: '8px' }, text: 'Numbers are kept in the booth’s own database, which refuses them to anyone outside the booth. They are never sent to any analytics.' }),
       ]),
 
       card('Sync', [
@@ -93,11 +92,6 @@ export function settingsScreen(ctx) {
     ),
 
     el('div',
-      card('Booth PIN', [
-        el('p.lead', { text: 'The PIN locks the app on this device and derives the key that encrypts customer numbers.' }),
-        el('button.big.quiet', { text: 'Change PIN', style: { marginTop: '10px' }, onclick: () => changePinSheet(ctx) }),
-      ]),
-
       card('Backup', [
         el('p.lead', { text: 'A backup file holds every version row of this device, including the encrypted customer numbers.' }),
         el('div.r', { style: { marginTop: '10px' } },
@@ -153,31 +147,6 @@ function signInSheet(ctx) {
       toast('Signed in'); close(); ctx.refresh(); sync.sync();
     } }),
     el('p.note', { style: { marginTop: '10px' }, text: 'The manager creates the accounts and puts them on the booth’s list.' }),
-  ]);
-}
-
-/* A new PIN means a new key: every stored number is re-encrypted and pushed as
-   a new version, so the other devices of the booth can still read them. */
-function changePinSheet(ctx) {
-  let oldPin = '', pin = '', again = '';
-  sheet('Change PIN', ({ close }) => [
-    el('div.field', el('label', { text: 'Current PIN' }),
-      el('input', { type: 'password', inputmode: 'numeric', oninput: (e) => { oldPin = e.target.value; } })),
-    el('div.field', el('label', { text: 'New PIN (4 to 8 digits)' }),
-      el('input', { type: 'password', inputmode: 'numeric', oninput: (e) => { pin = e.target.value; } })),
-    el('div.field', el('label', { text: 'Repeat new PIN' }),
-      el('input', { type: 'password', inputmode: 'numeric', oninput: (e) => { again = e.target.value; } })),
-    el('button.big', { text: 'Change PIN', onclick: async () => {
-      const booth = store.state.settings.boothId || 'local';
-      if (await pinHash(oldPin, booth) !== await DB.getMeta('pinHash', '')) return toast('Current PIN is wrong', { error: true });
-      if (!/^\d{4,8}$/.test(pin)) return toast('4 to 8 digits', { error: true });
-      if (pin !== again) return toast('The two new PINs differ', { error: true });
-      await unlock(pin, booth);
-      await DB.setMeta('pinHash', await pinHash(pin, booth));
-      const n = await store.reencryptNumbers();
-      toast(`PIN changed${n ? `, ${n} numbers re-encrypted` : ''}`);
-      close(); ctx.refresh();
-    } }),
   ]);
 }
 

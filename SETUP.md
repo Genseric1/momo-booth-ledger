@@ -143,14 +143,15 @@ need one.
 
 | Shared between all accounts | Stays on the phone |
 |---|---|
-| Every line, every correction, every deletion | The booth PIN |
-| Morning and evening counts | The agent chip list |
-| Debts and repayments | How customer numbers are displayed |
+| Every line, every correction, every deletion | Nothing, once signed in |
+| Morning and evening counts | |
+| Debts and repayments | |
 | Monthly commissions | |
 
-Customer numbers travel **encrypted**: the server never sees them in clear.
-The key comes from the booth PIN, so every device of the booth must use the
-**same PIN** to read them. Choose it once, together.
+Customer numbers are kept in the booth's own database and refused to anyone
+outside it. If you would rather not keep them at all, Settings has
+*Customer numbers → Last 4 only* or *Do not store* — the surest answer to
+Ghana's Data Protection Act.
 
 ## If something is wrong
 

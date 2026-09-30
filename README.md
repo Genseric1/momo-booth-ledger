@@ -127,9 +127,8 @@ list. The short version:
 | filled, `requireAccount: true` | No account, no page. |
 
 **The account is asked once.** After that the session is kept on the device and
-the page opens with the PIN alone — with or without network. An account gate
-that locks an agent out the day the network drops would be worse than the paper
-it replaces.
+the page opens straight away — with or without network. A gate that locks an
+agent out the day the network drops would be worse than the paper it replaces.
 
 Roles are enforced by the database, not the app: reading takes membership,
 writing takes a role that may write, so a boss can be given a `viewer` account
@@ -147,12 +146,13 @@ versions after a cursor) can replace Supabase; see `js/sync.js`.
 ## Privacy
 
 * The page shows the **whole customer number**, as the paper notebook does.
-  Settings offer masked (`0244***123`), last four digits, or not storing them at
-  all. The exported PDF masks them by default whatever the screen shows.
-* Stored numbers are encrypted on the device with AES-GCM under a key derived
-  from the booth PIN (PBKDF2), and stay encrypted when they sync — the server
-  holds ciphertext only. Changing the PIN re-encrypts them and pushes new
-  versions so the booth's other devices keep reading them.
+  Settings offer masked (`024 *** 3456`), last four digits, or **not storing
+  them at all** — the strongest privacy lever, and the one to reach for first.
+  The exported PDF masks them by default whatever the screen shows.
+* Numbers are kept in the booth's own database, which refuses them to anyone
+  who is not a member of the booth. They are not encrypted end-to-end: everyone
+  works on their own device, so there is no shared secret to carry a key, and
+  the booth's own dashboard can read them. Store less rather than encrypt more.
 * Numbers are never sent to analytics or logs, and never put in a URL.
 * The PDF can be password-protected (PDF standard security handler, RC4-40).
   That keeps a casual reader out of a file sent over WhatsApp; it is not strong
