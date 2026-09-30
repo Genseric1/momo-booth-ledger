@@ -111,15 +111,19 @@ insert into booth_members (booth_id, user_id, role) values
 Kojo runs the MoMo business and writes nearly every line, so the app already
 stamps his name on a line unless someone picks another from the menu.
 
-| Person | Role to give | Why |
+| Person | Role to give | What it gives |
 |---|---|---|
-| **Kojo** | `manager` | he runs the booth and writes the register |
-| **Modeste** | `manager` | you — full access |
+| **Kojo** | `manager` | everything: writes, corrects, deletes, counts, exports |
+| **Modeste** | `manager` | exactly the same as Kojo |
 | **Codjo** (CEO) | `viewer` | reads everything, cannot touch a line |
 | **Séphora** (COO) | `viewer` | same |
 
-Change `viewer` to `agent` for anyone who should also be able to write. Once
-each of the four has signed in once and sent you their id:
+`manager` is full access — Kojo and Modeste are equal, neither can do anything
+the other cannot. `agent` writes the register but is meant for someone who only
+stands at the counter. Change `viewer` to `agent` or `manager` for anyone who
+should also be able to write.
+
+Once each of the four has signed in once and sent you their id:
 
 ```sql
 insert into booth_members (booth_id, user_id, role) values
