@@ -133,7 +133,7 @@ export function settingsScreen(ctx) {
         el('div.rows',
           tile('Transactions', String(store.state.txs.length)),
           tile('Days', String(store.state.days.size)),
-          tile('Version rows', String(Object.values(store.state.raw).reduce((n, r) => n + r.length, 0))),
+          tile('Changes kept', String(Object.values(store.state.raw).reduce((n, r) => n + r.length, 0))),
           tile('Debt entries', String(store.state.debtEntries.length))),
         el('button.big.warn', { text: 'Erase local data', style: { marginTop: '12px' }, onclick: async () => {
           /* the count is the whole point: lines still waiting exist here and
@@ -147,7 +147,8 @@ export function settingsScreen(ctx) {
           await DB.wipe();
           location.reload();
         } }),
-        el('p.note', { text: 'This device only. The booth’s register and the other devices are untouched.' }),
+        el('p.note', { text: 'A line written, corrected, struck out or deleted each leave a trace, and the traces are kept — that is how two devices agree without overwriting each other. Nothing to do with the version of the app below.' }),
+        el('p.note', { text: 'Erasing affects this device only. The booth’s register and the other devices are untouched.' }),
       ]),
 
       card('About', [
