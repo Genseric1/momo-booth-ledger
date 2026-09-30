@@ -152,14 +152,18 @@ function verdict(rep, ctx) {
     ...rep.hints.map((h) => el('p.note', {
       text: `${WALLET_LABEL[h.a]} is ${money(h.amount, { dp: 0 })} over and ${WALLET_LABEL[h.b]} is ${money(h.amount, { dp: 0 })} short — a line of ${money(h.amount, { dp: 0 })} was probably written on the wrong network.`,
     })),
-    !sync.canWrite() ? null : el('button.big.quiet', {
-      text: rep.closed ? 'Reopen the day' : 'Close the day',
-      style: { marginTop: '18px' },
-      onclick: async () => {
-        rep.closed ? await store.reopenDay(ctx.date) : await store.closeDay(ctx.date);
-        toast(rep.closed ? 'Day reopened' : 'Day closed');
-        ctx.refresh();
-      },
-    }),
+    !sync.canWrite() ? null
+      : rep.closed && !sync.canReopenDay()
+        ? el('p.note', { style: { marginTop: '18px' },
+            text: 'This day is closed. Only the manager can reopen it.' })
+        : el('button.big.quiet', {
+            text: rep.closed ? 'Reopen the day' : 'Close the day',
+            style: { marginTop: '18px' },
+            onclick: async () => {
+              rep.closed ? await store.reopenDay(ctx.date) : await store.closeDay(ctx.date);
+              toast(rep.closed ? 'Day reopened' : 'Day closed');
+              ctx.refresh();
+            },
+          }),
     el('button.big.quiet', { text: 'Back to the page', style: { marginTop: '8px' }, onclick: () => ctx.go('page') }));
 }

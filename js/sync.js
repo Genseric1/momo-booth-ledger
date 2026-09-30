@@ -25,6 +25,11 @@ export const currentUser = () => session?.user || null;
 export const canWrite = () => status.role !== 'viewer';
 export const isViewer = () => status.role === 'viewer';
 
+/* Reopening a day that was closed and counted is the manager's call (spec §4).
+   A booth with no backend has no roles at all — there, whoever holds the PIN
+   is the manager. */
+export const canReopenDay = () => !status.configured || status.role === 'manager';
+
 const listeners = new Set();
 export const subscribe = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const emit = () => { for (const fn of listeners) fn(status); };

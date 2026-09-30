@@ -113,15 +113,15 @@ stamps his name on a line unless someone picks another from the menu.
 
 | Person | Role to give | What it gives |
 |---|---|---|
-| **Kojo** | `manager` | everything: writes, corrects, deletes, counts, exports |
+| **Kojo** | `manager` | everything: writes, corrects, deletes, counts, exports, and reopens a closed day |
 | **Modeste** | `manager` | exactly the same as Kojo |
 | **Codjo** (CEO) | `viewer` | reads everything, cannot touch a line |
 | **Séphora** (COO) | `viewer` | same |
 
 `manager` is full access — Kojo and Modeste are equal, neither can do anything
-the other cannot. `agent` writes the register but is meant for someone who only
-stands at the counter. Change `viewer` to `agent` or `manager` for anyone who
-should also be able to write.
+the other cannot. `agent` writes the register but cannot reopen a day that was
+closed and counted: that stays with the manager. Change `viewer` to `agent` or
+`manager` for anyone who should also be able to write.
 
 Once each of the four has signed in once and sent you their id:
 
