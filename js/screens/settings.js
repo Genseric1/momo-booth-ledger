@@ -136,12 +136,18 @@ export function settingsScreen(ctx) {
           tile('Version rows', String(Object.values(store.state.raw).reduce((n, r) => n + r.length, 0))),
           tile('Debt entries', String(store.state.debtEntries.length))),
         el('button.big.warn', { text: 'Erase local data', style: { marginTop: '12px' }, onclick: async () => {
-          if (!await confirmSheet('Erase local data',
-            'Everything stored on this device is removed. Rows already synced can come back from the server; anything still waiting to send is lost.',
-            { danger: true, okLabel: 'Erase' })) return;
+          /* the count is the whole point: lines still waiting exist here and
+             nowhere else, and this is the one button that can lose them */
+          const waiting = st.pendingCount;
+          const message = waiting
+            ? `${waiting} line${waiting === 1 ? '' : 's'} on this device ${waiting === 1 ? 'has' : 'have'} not reached the booth yet, and ${waiting === 1 ? 'it exists' : 'they exist'} nowhere else. Erasing now loses ${waiting === 1 ? 'it' : 'them'} for good. Sync first, wait for this to read 0, then erase.`
+            : 'Everything stored on this device is removed. It only affects this device — the booth keeps its register, and what was already sent comes back on the next sync.';
+          if (!await confirmSheet(waiting ? `${waiting} not sent yet` : 'Erase local data',
+            message, { danger: true, okLabel: waiting ? 'Erase and lose them' : 'Erase' })) return;
           await DB.wipe();
           location.reload();
         } }),
+        el('p.note', { text: 'This device only. The booth’s register and the other devices are untouched.' }),
       ]),
 
       card('About', [
