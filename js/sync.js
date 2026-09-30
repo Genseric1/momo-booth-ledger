@@ -13,7 +13,8 @@ import { state, reload, saveSettings } from './store.js';
 import { hasBackend } from './config.js';
 
 export const status = { configured: false, online: navigator.onLine, signedIn: false,
-  busy: false, lastSync: null, lastError: null, pendingCount: 0, email: null, role: null };
+  busy: false, lastSync: null, lastError: null, pendingCount: 0, email: null, role: null,
+  owner: false };
 
 export const hasSession = () => !!session?.access_token;
 export const currentEmail = () => session?.user?.email || null;
@@ -29,6 +30,10 @@ export const isViewer = () => status.role === 'viewer';
    A booth with no backend has no roles at all — there, whoever holds the PIN
    is the manager. */
 export const canReopenDay = () => !status.configured || status.role === 'manager';
+
+/* The booth belongs to one person: what the booth itself carries is theirs to
+   decide, whoever else runs the register. */
+export const isOwner = () => !status.configured || status.owner;
 
 const listeners = new Set();
 export const subscribe = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
@@ -48,6 +53,7 @@ export async function init() {
   status.signedIn = !!session?.access_token;
   status.email = session?.user?.email || null;
   status.role = await DB.getMeta('role', null);        // remembered, so it holds offline
+  status.owner = await DB.getMeta('owner', false);
   status.pendingCount = await countPending();
   addEventListener('online', () => { status.online = true; emit(); sync(); });
   addEventListener('offline', () => { status.online = false; emit(); });
@@ -183,10 +189,14 @@ export async function pullBoothSettings() {
   const booth = state.settings?.boothId;
   if (!booth || !session?.access_token) return;
   try {
-    const rows = await rest(`/rest/v1/booths?select=export_password&id=eq.${booth}`);
-    const value = rows?.[0]?.export_password;
-    if (value != null && value !== state.settings.exportPassword) {
-      await saveSettings({ exportPassword: value });
+    const rows = await rest(`/rest/v1/booths?select=export_password,owner_id&id=eq.${booth}`);
+    const row = rows?.[0];
+    if (!row) return;
+    status.owner = !!row.owner_id && row.owner_id === session.user?.id;
+    await DB.setMeta('owner', status.owner);
+    emit();
+    if (row.export_password != null && row.export_password !== state.settings.exportPassword) {
+      await saveSettings({ exportPassword: row.export_password });
     }
   } catch { /* keep what this device already knows */ }
 }
@@ -225,7 +235,8 @@ export async function signOut() {
   session = null;
   await DB.setMeta('session', null);
   await DB.setMeta('role', null);
-  status.signedIn = false; status.email = null; status.role = null; emit();
+  await DB.setMeta('owner', false);
+  status.signedIn = false; status.email = null; status.role = null; status.owner = false; emit();
 }
 /* true when the token is gone or about to be */
 function expiringSoon() {

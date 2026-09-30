@@ -100,7 +100,13 @@ export function settingsScreen(ctx) {
       ]),
 
       card('Exported registers', [
-        el('div.field',
+        !sync.isOwner()
+          ? el('div',
+              el('p.lead', { text: s.exportPassword
+                ? 'Every register you export carries the booth’s password.'
+                : 'Registers you export open freely.' }),
+              el('p.note', { text: 'Only the owner of the booth changes this.' }))
+          : el('div.field',
           el('label', { text: 'Password put on every export' }),
           el('input', { type: 'text', value: s.exportPassword || '', placeholder: 'none — registers open freely',
             onchange: async (e) => {
@@ -108,7 +114,7 @@ export function settingsScreen(ctx) {
                 const r = await sync.pushExportPassword(e.target.value.trim());
                 toast(r.shared ? 'Saved for the whole booth' : 'Saved on this device');
               } catch (err) {
-                toast(/403|401/.test(err.message) ? 'Only a manager can change it' : err.message, { error: true });
+                toast(/403|401/.test(err.message) ? 'Only the owner of the booth can change it' : err.message, { error: true });
               }
               ctx.refresh();
             } })),

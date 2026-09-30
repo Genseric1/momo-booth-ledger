@@ -21,6 +21,9 @@ create table if not exists booths (
   created_at       timestamptz not null default now()
 );
 alter table booths add column if not exists export_password text not null default '';
+-- the one person who decides for the booth; managers run the register, the
+-- owner decides what the booth itself carries
+alter table booths add column if not exists owner_id uuid references auth.users(id);
 
 create table if not exists booth_members (
   booth_id  uuid not null references booths(id) on delete cascade,
@@ -172,10 +175,12 @@ alter table commission_versions   enable row level security;
 drop policy if exists booths_read on booths;
 create policy booths_read on booths for select using (is_booth_member(id));
 
--- only a manager changes what the booth decides, such as the export password
+-- only the owner changes what the booth itself carries, such as the password
+-- put on every exported register. A manager runs the register; he does not
+-- decide this.
 drop policy if exists booths_update on booths;
 create policy booths_update on booths for update
-  using (booth_role(id) = 'manager') with check (booth_role(id) = 'manager');
+  using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 
 drop policy if exists members_read on booth_members;
 create policy members_read on booth_members for select using (user_id = auth.uid() or is_booth_member(booth_id));
