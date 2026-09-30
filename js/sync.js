@@ -348,8 +348,23 @@ async function doSync() {
   return { pushed, pulled, error: status.lastError };
 }
 
-/* Called by the store after every local write, and on a timer while online. */
-export function startAutoSync(everyMs = 30000) {
-  setInterval(() => { if (navigator.onLine) sync(); }, everyMs);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
+/* Nobody should have to press anything. This runs after every line written,
+   whenever the app comes back to the front, the moment the network returns,
+   and on a timer in between — quick while somebody is looking at the page,
+   slow while nobody is, so a phone in a pocket is left alone. */
+const WATCHING = 10000;
+const POCKETED = 60000;
+
+export function startAutoSync() {
+  let timer = null;
+  const pace = () => {
+    clearInterval(timer);
+    timer = setInterval(() => { if (navigator.onLine) sync(); },
+      document.hidden ? POCKETED : WATCHING);
+  };
+  document.addEventListener('visibilitychange', () => {
+    pace();
+    if (!document.hidden) sync();
+  });
+  pace();
 }

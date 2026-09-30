@@ -88,7 +88,8 @@ export function settingsScreen(ctx) {
               { error: !!r?.error });
             ctx.refresh();
           } })),
-        el('p.note', { style: { marginTop: '8px' }, text: 'Run supabase/schema.sql once in your project, then add each agent to booth_members. Rows are isolated per booth by the database itself.' }),
+        el('p.note', { style: { marginTop: '8px' }, text: 'This happens by itself: after every line written, when the page comes back to the front, the moment the network returns, and every ten seconds while you are on it. The button above is only to hurry it.' }),
+        el('p.note', { text: 'Rows are isolated per booth by the database itself.' }),
       ]),
     ),
 
