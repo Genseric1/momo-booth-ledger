@@ -130,6 +130,27 @@ export async function captureRedirectSession() {
   return true;
 }
 
+/* A password given out to get someone started is a password they must be able
+   to replace themselves, from the page, without asking anybody. */
+export async function changePassword(password) {
+  if (!session?.access_token) throw new Error('Sign in first.');
+  const { url, key } = cfg();
+  const res = await fetch(`${url}/auth/v1/user`, {
+    method: 'PUT',
+    headers: { apikey: key, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.msg || body.error_description || body.message || 'Could not change the password.');
+  }
+  const user = await res.json();
+  session = { ...session, user };
+  await DB.setMeta('session', session);
+  emit();
+  return user;
+}
+
 export function googleSignIn() {
   const { url } = cfg();
   const back = location.origin + location.pathname;

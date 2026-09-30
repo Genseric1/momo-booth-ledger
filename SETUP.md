@@ -87,13 +87,15 @@ opens for everyone.
 This is the last step, and it happens **after** each person has tried to sign
 in once — signing in is what creates their account row.
 
-1. Ask the person to open the app and sign in (with Google, or with an email
-   and a password you gave them).
-2. The app turns them away with a line like:
+1. Create their account — **Authentication → Users → Add user → Create new
+   user** — with their own email, a password you make up for now, and
+   *Auto Confirm User* on. Send them the password.
+2. Ask them to open the app and sign in with it.
+3. The app turns them away with a line like:
    *"That account is not on this booth's list yet. Give the manager this:
    kwame@gmail.com (id 9c1e...)"*
    Ask them to send you that line.
-3. In the SQL Editor:
+4. In the SQL Editor:
 
 ```sql
 insert into booth_members (booth_id, user_id, role) values
@@ -103,8 +105,11 @@ insert into booth_members (booth_id, user_id, role) values
    Roles: `manager` and `agent` can write the register; `viewer` can only read
    it — the database refuses every line a viewer tries to write, and the app
    hides the pen from him.
-4. They sign in again. They are in, and from then on every device of the booth
+5. They sign in again. They are in, and from then on every device of the booth
    shows the same page.
+6. **Tell them to change the password**: in the app, **☰ → Settings → Your
+   account → Change my password**. The one you made up was only to get them
+   started — after this, nobody else knows theirs, you included.
 
 ### The four to start with
 

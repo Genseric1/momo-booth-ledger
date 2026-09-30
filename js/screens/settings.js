@@ -1,6 +1,6 @@
 /* ═══════════════ SETTINGS (spec §2, §3, §9) ═══════════════ */
 
-import { el, card, sheet, toast, chipRow, confirmSheet, tile } from '../ui.js';
+import { el, card, sheet, toast, chipRow, confirmSheet, tile, fill } from '../ui.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import * as DB from '../db.js';
@@ -92,6 +92,12 @@ export function settingsScreen(ctx) {
     ),
 
     el('div',
+      !st.signedIn ? null : card('Your account', [
+        el('p.lead', { text: `Signed in as ${st.email || 'this account'}.` }),
+        el('button.big.quiet', { text: 'Change my password', onclick: () => changePasswordSheet(ctx) }),
+        el('p.note', { text: 'Given a password to get started? Change it here — nobody else needs to know the new one.' }),
+      ]),
+
       card('Backup', [
         el('p.lead', { text: 'A backup file holds every version row of this device, including the encrypted customer numbers.' }),
         el('div.r', { style: { marginTop: '10px' } },
@@ -148,6 +154,32 @@ function signInSheet(ctx) {
     } }),
     el('p.note', { style: { marginTop: '10px' }, text: 'The manager creates the accounts and puts them on the booth’s list.' }),
   ]);
+}
+
+function changePasswordSheet(ctx) {
+  let pwd = '', again = '', busy = false;
+  sheet('Change my password', ({ body, close }) => {
+    const render = (error = null) => fill(body,
+      el('div.field', el('label', { text: 'New password' }),
+        el('input', { type: 'password', autocomplete: 'new-password', value: pwd,
+          oninput: (e) => { pwd = e.target.value; } })),
+      el('div.field', el('label', { text: 'Repeat it' }),
+        el('input', { type: 'password', autocomplete: 'new-password', value: again,
+          oninput: (e) => { again = e.target.value; } })),
+      error ? el('p.note', { style: { color: 'var(--red)' }, text: error }) : null,
+      el('button.big', { text: busy ? 'Changing…' : 'Change it', disabled: busy, onclick: async () => {
+        if (pwd.length < 6) return render('At least six characters.');
+        if (pwd !== again) return render('The two do not match.');
+        if (!navigator.onLine) return render('You need the network to change a password.');
+        busy = true; render();
+        try { await sync.changePassword(pwd); } catch (e) { busy = false; return render(e.message); }
+        toast('Password changed');
+        close(); ctx.refresh();
+      } }),
+      el('p.note', { text: 'You stay signed in on this device. Other devices keep working until they sign out.' }));
+    render();
+    return [];
+  });
 }
 
 async function exportBackup() {
