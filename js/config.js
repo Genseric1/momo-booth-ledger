@@ -6,6 +6,11 @@
    device, no account, no server. Fill these in and redeploy, and every device
    picks the booth up on its next load.                                       */
 
+/* Bumped on every publish, and shown in Settings so the screen says which
+   version it is actually running — the service worker caches under the same
+   name, and a test keeps the two from drifting apart. */
+export const VERSION = 'v34';
+
 export const CONFIG = {
   /* From the Supabase dashboard: Project settings -> API */
   supabaseUrl: 'https://mzslslabhwbonpklpzcv.supabase.co',

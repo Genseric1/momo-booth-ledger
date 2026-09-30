@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node serve.mjs",
-    "test": "node --test tests/acceptance.test.mjs tests/sync.test.mjs tests/number.test.mjs"
+    "test": "node --test tests/acceptance.test.mjs tests/sync.test.mjs tests/number.test.mjs tests/version.test.mjs"
   },
   "dependencies": {},
   "devDependencies": {}

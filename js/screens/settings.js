@@ -5,7 +5,7 @@ import { dayKey } from '../util.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import * as DB from '../db.js';
-import { hasBackend, needsAccount, CONFIG } from '../config.js';
+import { hasBackend, needsAccount, CONFIG, VERSION } from '../config.js';
 
 const NUMBER_MODES = [
   { value: 'masked', label: 'Masked' }, { value: 'last4', label: 'Last 4 only' },
@@ -152,7 +152,11 @@ export function settingsScreen(ctx) {
       ]),
 
       card('About', [
-        el('p.lead', { text: 'PACSBI Register v1 — one booth, one shared till, several agents. Works offline; entries are never lost waiting for the network.' }),
+        el('div.rows', el('div.r',
+          el('div', { text: 'Version running here' }, el('small', { text: 'reload twice to pick up a newer one' })),
+          el('div.sp'),
+          el('div.v.num', { text: VERSION }))),
+        el('p.lead', { style: { marginTop: '12px' }, text: 'PACSBI Register — one booth, one shared till, several agents. Works offline; entries are never lost waiting for the network.' }),
         el('p.note', { style: { marginTop: '8px' }, text: 'Not yet in this version: photo/OCR of transaction IDs, viewer accounts for bosses, several booths, automatic SMS reading.' }),
       ]),
     ),

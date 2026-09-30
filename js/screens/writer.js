@@ -37,14 +37,24 @@ export function writerBar(ctx) {
       paintNet();
       if (isCompleteNumber(d.number)) amount.focus();          // the number is done, move on
     },
-    onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); amount.focus(); } },
+    /* Enter does the obvious thing from wherever the cursor is: move on if the
+       amount is still missing, write the line if it is there. */
+    onkeydown: (e) => {
+      if (e.key !== 'Enter' && e.key !== 'Return') return;
+      e.preventDefault();
+      if (Number(d.amount) > 0) save(); else amount.focus();
+    },
   });
 
   const amount = el('input.pen-amt.num', {
     type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: 'amount',
     value: groupAmount(d.amount), 'aria-label': 'amount',
     oninput: (e) => { d.amount = parseAmount(e.target.value); e.target.value = groupAmount(d.amount); },
-    onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } },
+    onkeydown: (e) => {
+      if (e.key !== 'Enter' && e.key !== 'Return') return;
+      e.preventDefault();
+      save();
+    },
   });
 
   const dirs = el('div.pen-dirs');
