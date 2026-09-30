@@ -17,7 +17,8 @@ const OPTIONS = [
   ['statistics', 'Include statistics'],
   ['extras', 'Include estimated extra fees'],
   ['cancelled', 'Include cancelled lines (struck through)'],
-  ['debts', 'Include debt accounts'],
+  ['debts', 'Include who still owes'],
+  ['agents', 'Include who wrote each line'],
   ['fullNumbers', 'Show full customer numbers'],
 ];
 
@@ -113,5 +114,6 @@ function generate(st, range) {
 
 export const initialExportState = () => ({
   scope: 'day', anchor: today(), password: '',
-  options: { balances: false, statistics: false, extras: false, cancelled: false, debts: false, fullNumbers: false },
+  options: { balances: false, statistics: false, extras: false, cancelled: false,
+    debts: false, agents: false, fullNumbers: false },
 });

@@ -28,7 +28,7 @@ export function buildRegister({
   options = {}, password = '',
 }) {
   const o = { balances: false, statistics: false, extras: false, cancelled: false,
-    debts: false, fullNumbers: false, ...options };
+    debts: false, fullNumbers: false, agents: false, ...options };
 
   const pdf = new Pdf({ size: 'A4', password, title: `${boothName} — register ${range.start} to ${range.end}` });
   const right = pdf.w - M;
@@ -94,7 +94,7 @@ export function buildRegister({
         { size: 11, color: colour, strike: off });
       pdf.text(COL.network, y + 13, WALLET_LABEL[t.wallet].toLowerCase(), { size: 9, color: off ? RED : GREY });
       pdf.text(COL.dir, y + 13, DIR[t.type], { size: 10.5, bold: true, color: colour, strike: off });
-      const aside = [t.agent, t.sub_type, t.note].filter(Boolean).join(' - ');
+      const aside = [o.agents ? t.agent : null, t.sub_type, t.note].filter(Boolean).join(' - ');
       if (aside) pdf.text(COL.note, y + 13, pdf.fit(aside, right - COL.note - 100, 8.5), { size: 8.5, color: FAINT });
       pdf.text(right, y + 13, amt(t.amount), { size: 12, bold: true, color: colour, align: 'right', strike: off });
       y += LINE;
@@ -231,7 +231,9 @@ export function buildRegister({
     pdf.line(M, pdf.h - M - 14, right, pdf.h - M - 14, { width: 0.4, color: FAINT });
     pdf.text(M, pdf.h - M - 2, boothName, { size: 7.5, color: FAINT });
     pdf.text(pdf.w / 2, pdf.h - M - 2, `${i + 1} of ${total}`, { size: 7.5, color: FAINT, align: 'center' });
-    pdf.text(right, pdf.h - M - 2, o.fullNumbers ? 'full customer numbers' : 'customer numbers masked',
+    pdf.text(right, pdf.h - M - 2,
+      [o.fullNumbers ? 'full customer numbers' : 'customer numbers masked', o.agents ? 'with the agent' : null]
+        .filter(Boolean).join(' · '),
       { size: 7.5, color: FAINT, align: 'right' });
   });
 

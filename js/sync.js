@@ -17,6 +17,7 @@ export const status = { configured: false, online: navigator.onLine, signedIn: f
 
 export const hasSession = () => !!session?.access_token;
 export const currentEmail = () => session?.user?.email || null;
+export const currentUser = () => session?.user || null;
 
 /* A viewer — a boss given read access — is refused every insert by the
    database. The app hides the pen rather than let him write lines that would

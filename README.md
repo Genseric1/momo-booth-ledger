@@ -105,14 +105,18 @@ Sync is optional. Without a backend the app is a complete local register.
 
 ### Supabase, and accounts
 
-1. Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor, then
-   follow the comments at the end of that file: create the booth row, create
-   each account yourself in **Authentication → Users**, and give it a role in
-   `booth_members` (`manager`, `agent` or `viewer`).
-2. Turn off public sign-ups — Authentication → Providers → Email → *Enable sign
-   ups* off — so the link alone cannot create an account.
+**[SETUP.md](SETUP.md) walks through it click by click** — creating the project,
+the tables, the booth, Google sign-in, and putting each person on the booth's
+list. The short version:
+
+1. Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor and create
+   the booth row.
+2. Turn off public sign-ups, and turn on Google if the manager signs in with his
+   own gmail.
 3. Put the project URL, the anon key and the booth id in
    [`js/config.js`](js/config.js) and publish. No agent ever types them.
+4. Each person signs in once; the app turns them away with their account id;
+   you add that id to `booth_members` with a role.
 
 `config.requireAccount` decides how the page opens:
 

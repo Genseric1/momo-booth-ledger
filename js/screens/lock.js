@@ -31,22 +31,25 @@ export function lockScreen(root) {
     if (!sync.hasSession()) { renderSignIn(root, pinDoor); return; }
     /* The tool belongs to one booth: an account that is not on its list is
        turned away, whichever way it signed in. */
-    guardMembership().then((ok) => (ok ? pinDoor() : renderSignIn(root, pinDoor, notOnTheList())));
+    guardMembership().then((r) => (r.ok ? pinDoor() : renderSignIn(root, pinDoor, notOnTheList(r))));
   });
 }
 
-const notOnTheList = () => 'That account is not on this booth’s list. Ask the manager to add it.';
+/* Turned away, but with everything the manager needs to let him in. */
+const notOnTheList = (who) => `That account is not on this booth's list yet.`
+  + (who?.email ? ` Give the manager this: ${who.email}` : '')
+  + (who?.id ? ` (id ${who.id})` : '');
 
 /* A signed-in device checks, when it can, that the account still belongs to the
    booth. Offline it trusts the role it remembers, so the network never locks
    an agent out of his own page. */
 async function guardMembership() {
-  if (sync.status.role) return true;
-  if (!navigator.onLine) return true;
-  const role = await sync.refreshRole();
-  if (role) return true;
+  if (sync.status.role) return { ok: true };
+  if (!navigator.onLine) return { ok: true };
+  if (await sync.refreshRole()) return { ok: true };
+  const who = sync.currentUser();
   await sync.signOut();
-  return false;
+  return { ok: false, email: who?.email || null, id: who?.id || null };
 }
 
 function renderSignIn(root, next, firstError = null) {
@@ -72,7 +75,8 @@ function renderSignIn(root, next, firstError = null) {
         busy = true; render();
         try {
           await sync.signIn(email, password);
-          if (!await guardMembership()) { busy = false; return render(notOnTheList()); }
+          const check = await guardMembership();
+          if (!check.ok) { busy = false; return render(notOnTheList(check)); }
         } catch (e) {
           busy = false;
           return render(
