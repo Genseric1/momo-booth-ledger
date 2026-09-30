@@ -95,7 +95,15 @@ async function boot() {
   await sync.init();                 // loads the cached session — works offline
   await lockScreen(root);
   store.onSyncNeeded(sync.sync);
-  sync.subscribe(paintSync);
+  sync.subscribe(() => {
+    paintSync();
+    /* Settings shows the state of the sync, so it has to follow it — but never
+       while a field is being typed into, or the cursor would jump out. */
+    if (ctx.view !== 'settings') return;
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || document.querySelector('.sheet-bg')) return;
+    render();
+  });
   sync.startAutoSync();
   render();
   sync.sync();
