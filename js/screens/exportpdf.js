@@ -10,6 +10,7 @@ import * as store from '../store.js';
 const SCOPES = [
   { value: 'day', label: 'One day' }, { value: 'week', label: 'A week' },
   { value: 'month', label: 'A month' }, { value: 'year', label: 'A year' },
+  { value: 'range', label: 'Two dates' },
 ];
 
 const OPTIONS = [
@@ -32,7 +33,15 @@ export function exportScreen(ctx) {
     el('div',
       card('What to export', [
         chipRow(SCOPES, st.scope, (v) => { st.scope = v; ctx.refresh(); }),
-        el('div.field', { style: { marginTop: '12px' } },
+        st.scope === 'range'
+          ? el('div.field', { style: { marginTop: '12px' } },
+              el('label', { text: 'From, to' }),
+              el('div.grid2',
+                el('input', { type: 'date', value: st.from, max: today(),
+                  onchange: (e) => { st.from = e.target.value; ctx.refresh(); } }),
+                el('input', { type: 'date', value: st.to, max: today(),
+                  onchange: (e) => { st.to = e.target.value; ctx.refresh(); } })))
+          : el('div.field', { style: { marginTop: '12px' } },
           el('label', { text: st.scope === 'year' ? 'Year' : st.scope === 'month' ? 'Month' : 'Date inside the period' }),
           st.scope === 'year'
             ? el('input', { type: 'number', min: '2020', max: '2100', value: st.anchor.slice(0, 4),
@@ -77,6 +86,11 @@ export function exportScreen(ctx) {
 
 function rangeOf(st) {
   const a = st.anchor;
+  if (st.scope === 'range') {
+    /* whichever way round they were picked */
+    const [start, end] = [st.from, st.to].sort();
+    return { start, end };
+  }
   if (st.scope === 'day') return { start: a, end: a };
   if (st.scope === 'week') {
     const d = parseDay(a);
@@ -113,7 +127,7 @@ function generate(st, range) {
 }
 
 export const initialExportState = () => ({
-  scope: 'day', anchor: today(), password: '',
+  scope: 'day', anchor: today(), from: today(), to: today(), password: '',
   options: { balances: false, statistics: false, extras: false, cancelled: false,
     debts: false, agents: false, fullNumbers: false },
 });

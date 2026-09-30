@@ -47,7 +47,7 @@ function renderSignIn(root, resolve, firstError = null) {
   const render = (error = firstError) => shell(root,
     logo(),
     el('p.lead', { style: { textAlign: 'center', margin: '14px 0' },
-      text: 'Sign in once on this device. It stays signed in afterwards, with or without network.' }),
+      text: 'The booth’s register: every line written at the counter, the morning and evening counts, and what is owed — the same on every device.' }),
     el('div.field',
       el('label', { text: 'Email' }),
       el('input', { type: 'email', inputmode: 'email', autocomplete: 'username', value: email,
@@ -86,6 +86,6 @@ function renderSignIn(root, resolve, firstError = null) {
           } })
       : null,
     el('p.note', { style: { textAlign: 'center' },
-      text: 'This page belongs to one booth. Sign in with your own account — the manager puts it on the booth’s list.' }));
+      text: 'Access is by account, and this device stays signed in afterwards.' }));
   render();
 }

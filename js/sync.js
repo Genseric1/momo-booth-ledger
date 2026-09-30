@@ -134,11 +134,18 @@ export async function captureRedirectSession() {
     expires_at: Number(hash.get('expires_at')) || null,
     user: null,
   };
+  /* anybody can put an access_token in a link; it is only kept if the server
+     recognises it */
   try {
     const { url, key } = cfg();
     const res = await fetch(`${url}/auth/v1/user`, { headers: { apikey: key, Authorization: `Bearer ${token}` } });
-    if (res.ok) session.user = await res.json();
-  } catch { /* the token still works; the name simply stays unknown */ }
+    if (!res.ok) throw new Error('unknown token');
+    session.user = await res.json();
+  } catch {
+    session = null;
+    history.replaceState(null, '', location.pathname + location.search);
+    return false;
+  }
   await DB.setMeta('session', session);
   history.replaceState(null, '', location.pathname + location.search);
   status.signedIn = true;

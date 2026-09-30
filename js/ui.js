@@ -15,7 +15,6 @@ export function el(spec, props = {}, ...children) {
     if (v == null || v === false) continue;
     if (k === 'class') node.className += (node.className ? ' ' : '') + v;
     else if (k === 'text') node.textContent = v;
-    else if (k === 'html') node.innerHTML = v;
     else if (k === 'style') Object.assign(node.style, v);
     else if (k.startsWith('on')) node.addEventListener(k.slice(2).toLowerCase(), v);
     else if (k === 'value') node.value = v;
