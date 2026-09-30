@@ -84,32 +84,39 @@ opens for everyone.
 
 ## 7. Put each person on the booth's list
 
-This is the last step, and it happens **after** each person has tried to sign
-in once — signing in is what creates their account row.
+An account says who someone is. The booth's list says who may come in, and as
+what. The two are separate on purpose: otherwise any account on your project
+could read the register.
 
-1. Create their account — **Authentication → Users → Add user → Create new
-   user** — with their own email, a password you make up for now, and
-   *Auto Confirm User* on. Send them the password.
-2. Ask them to open the app and sign in with it.
-3. The app turns them away with a line like:
-   *"That account is not on this booth's list yet. Give the manager this:
-   kwame@gmail.com (id 9c1e...)"*
-   Ask them to send you that line.
-4. In the SQL Editor:
+### The way you will do it
+
+1. **Authentication → Users → Add user → Create new user**: their email, a
+   password you make up for now, *Auto Confirm User* on.
+2. Their line appears in the table straight away. **Copy the UID** from the
+   first column.
+3. In the SQL Editor:
 
 ```sql
 insert into booth_members (booth_id, user_id, role) values
-  ('PASTE-THE-BOOTH-ID', 'PASTE-THE-ACCOUNT-ID', 'manager');
+  ('PASTE-THE-BOOTH-ID', 'PASTE-THE-UID', 'manager');
 ```
 
-   Roles: `manager` and `agent` can write the register; `viewer` can only read
-   it — the database refuses every line a viewer tries to write, and the app
-   hides the pen from him.
-5. They sign in again. They are in, and from then on every device of the booth
-   shows the same page.
-6. **Tell them to change the password**: in the app, **☰ → Settings → Your
-   account → Change my password**. The one you made up was only to get them
-   started — after this, nobody else knows theirs, you included.
+4. Send them the password. They sign in — **it works the first time**.
+5. Tell them to change it: **☰ → Settings → Your account → Change my
+   password**. The one you made up was only a ticket in; after that nobody
+   else knows theirs, you included.
+
+### The one case where they are turned away first
+
+With **Continue with Google**, the account does not exist until the person has
+signed in once. So the first attempt is refused, and the page shows them
+exactly what you need:
+
+> *That account is not on this booth's list yet. Give the manager this:
+> kwame@gmail.com (id 9c1e...)*
+
+They send you that line, you run the same `insert` with that id, they sign in
+again. Nothing was broken — that refusal is the normal first step for Google.
 
 ### The four to start with
 
