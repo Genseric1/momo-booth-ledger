@@ -120,3 +120,15 @@ test('a password-protected PDF is encrypted and declares the standard handler', 
   assert.ok(raw.includes('/Encrypt'));
   assert.equal(pdfText(bytes).length, 0, 'the visible text is no longer readable in the file');
 });
+
+/* The bug that kept three devices at "2 to send" although the server had the
+   lines: an insert sent with `return=minimal` answers 201 with no body, and
+   asking an empty answer for its JSON throws. */
+test('an empty answer from the server is not an error', async () => {
+  const { readBody } = await import('../js/sync.js');
+
+  assert.equal(await readBody(new Response('', { status: 201 })), null);
+  assert.equal(await readBody(new Response(null, { status: 204 })), null);
+  assert.equal(await readBody(new Response('   ', { status: 200 })), null);
+  assert.deepEqual(await readBody(new Response('[{"vid":"a"}]')), [{ vid: 'a' }]);
+});

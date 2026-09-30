@@ -73,11 +73,22 @@ function headers(json = true) {
   return h;
 }
 
+/* An answer with nothing in it is still an answer. `return=minimal` sends an
+   empty body, and not always under 204 — an insert answers 201 with no body at
+   all. Handing that to res.json() throws, the push counted as failed, the rows
+   were never marked sent, and the queue sat there for ever although the server
+   had them. So: read the body, and only parse it if there is one. */
+export async function readBody(res) {
+  const body = await res.text();
+  if (!body.trim()) return null;
+  return JSON.parse(body);
+}
+
 async function rest(path, opts = {}) {
   const { url } = cfg();
   const res = await fetch(`${url}${path}`, { ...opts, headers: { ...headers(), ...(opts.headers || {}) } });
   if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
-  return res.status === 204 ? null : res.json();
+  return readBody(res);
 }
 
 /* The role comes from the booth's own membership table. */
@@ -227,7 +238,10 @@ export async function signIn(email, password) {
     method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) throw new Error((await res.json()).error_description || 'sign in failed');
+  if (!res.ok) {
+    const body = await readBody(res).catch(() => null);
+    throw new Error(body?.error_description || body?.msg || 'sign in failed');
+  }
   session = await res.json();
   await DB.setMeta('session', session);
   status.signedIn = true; status.email = session.user?.email || email; emit();
