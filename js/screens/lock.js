@@ -13,8 +13,8 @@ import { needsAccount, CONFIG } from '../config.js';
 
 const logo = () => el('div', { style: { textAlign: 'center' } },
   el('img.mark', { src: 'icons/icon-192.png', alt: 'PACSBI Limited', width: 96, height: 96 }),
-  el('h1', { text: 'MoMo Ledger' }),
-  el('div.l2', { text: 'the booth page' }));
+  el('h1', { text: 'PACSBI Register' }),
+  el('div.l2', { text: 'mobile money' }));
 
 function shell(root, ...kids) {
   document.body.classList.add('locked');

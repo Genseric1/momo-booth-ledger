@@ -246,5 +246,17 @@ export function buildRegister({
   return pdf.save();
 }
 
-export const suggestedName = (boothName, range) =>
-  `${boothName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-register-${range.start}_${range.end}.pdf`;
+/* A folder of these sorts itself, and the name says how much is inside:
+     one day    pacsbi-register-2026-09-30.pdf
+     a week     pacsbi-register-2026-09-28_2026-10-04.pdf
+     a month    pacsbi-register-2026-09.pdf
+     a year     pacsbi-register-2026.pdf                                      */
+export function suggestedName(boothName, range, scope = 'day') {
+  const who = String(boothName || 'booth').trim().toLowerCase().split(/\s+/)[0]
+    .replace(/[^a-z0-9]+/g, '') || 'booth';
+  const span = scope === 'year' ? range.start.slice(0, 4)
+    : scope === 'month' ? range.start.slice(0, 7)
+    : range.start === range.end ? range.start
+    : `${range.start}_${range.end}`;
+  return `${who}-register-${span}.pdf`;
+}

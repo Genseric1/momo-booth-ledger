@@ -1,6 +1,7 @@
 /* ═══════════════ SETTINGS (spec §2, §3, §9) ═══════════════ */
 
 import { el, card, sheet, toast, chipRow, confirmSheet, tile, fill } from '../ui.js';
+import { dayKey } from '../util.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import * as DB from '../db.js';
@@ -121,7 +122,7 @@ export function settingsScreen(ctx) {
       ]),
 
       card('About', [
-        el('p.lead', { text: 'MoMo Booth Ledger v1 — one booth, one shared till, several agents. Works offline; entries are never lost waiting for the network.' }),
+        el('p.lead', { text: 'PACSBI Register v1 — one booth, one shared till, several agents. Works offline; entries are never lost waiting for the network.' }),
         el('p.note', { style: { marginTop: '8px' }, text: 'Not yet in this version: photo/OCR of transaction IDs, viewer accounts for bosses, several booths, automatic SMS reading.' }),
       ]),
     ),
@@ -192,7 +193,9 @@ async function exportBackup() {
   const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `momo-ledger-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const who = (store.state.settings.boothName || 'booth').trim().toLowerCase().split(/\s+/)[0]
+    .replace(/[^a-z0-9]+/g, '') || 'booth';
+  a.download = `${who}-backup-${dayKey(new Date())}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 20000);
   toast('Backup exported');

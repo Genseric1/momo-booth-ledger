@@ -1,5 +1,5 @@
 {
-  "name": "momo-booth-ledger",
+  "name": "pacsbi-register",
   "version": "1.0.0",
   "private": true,
   "description": "Offline-first PWA replacing the paper notebook of a mobile money booth (MTN MoMo, Telecel Cash, AT Money + cash). Pilot: PACSBI Limited, Ghana.",

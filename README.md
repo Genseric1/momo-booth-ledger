@@ -1,4 +1,4 @@
-# MoMo Booth Ledger — v1
+# PACSBI Register — v1
 
 Replaces the paper notebook of a mobile money booth in Ghana (MTN MoMo, Telecel
 Cash, AT Money and physical cash). Built for the PACSBI Limited pilot: one booth,

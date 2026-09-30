@@ -1,6 +1,6 @@
 {
-  "name": "MoMo Booth Ledger",
-  "short_name": "MoMo Ledger",
+  "name": "PACSBI Register",
+  "short_name": "PACSBI",
   "description": "Register for a mobile money booth: MTN MoMo, Telecel Cash, AT Money and cash. Works offline.",
   "start_url": ".",
   "scope": ".",

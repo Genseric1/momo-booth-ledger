@@ -45,7 +45,7 @@ export const SIZES = { A4: [595.28, 841.89], A4_LANDSCAPE: [841.89, 595.28] };
 
 export class Pdf {
   /* y grows downwards from the top of the page, which is easier to lay out. */
-  constructor({ size = 'A4', title = 'Register', author = 'MoMo Booth Ledger', password = '', ownerPassword = '' } = {}) {
+  constructor({ size = 'A4', title = 'Register', author = 'PACSBI Register', password = '', ownerPassword = '' } = {}) {
     [this.w, this.h] = SIZES[size] || SIZES.A4;
     this.title = title; this.author = author;
     this.password = password; this.ownerPassword = ownerPassword;
@@ -126,7 +126,7 @@ export class Pdf {
     objects.set(2, `<< /Type /Pages /Count ${this.pages.length} /Kids [${pageIds.map((i) => `${i} 0 R`).join(' ')}] >>`);
     objects.set(3, `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`);
     objects.set(4, `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>`);
-    objects.set(5, `<< /Title (${esc(this.title)}) /Author (${esc(this.author)}) /Producer (MoMo Booth Ledger) /CreationDate (D:${stampDate()}) >>`);
+    objects.set(5, `<< /Title (${esc(this.title)}) /Author (${esc(this.author)}) /Producer (PACSBI Register) /CreationDate (D:${stampDate()}) >>`);
     if (sec) objects.set(6, `<< /Filter /Standard /V 1 /R 2 /O <${hex(sec.O)}> /U <${hex(sec.U)}> /P ${sec.permissions} >>`);
 
     imgs.forEach((img, i) => {
