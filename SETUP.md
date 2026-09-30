@@ -174,3 +174,62 @@ Ghana's Data Protection Act.
   step 3.
 - **Lines written before all this** are not lost: they are stamped with the
   booth the first time the phone syncs, and they go up like the rest.
+
+---
+
+# Going live
+
+Two things, in this order. Twenty minutes in all, once.
+
+## 1. Empty the register (you, on the PC — 2 min)
+
+The database still holds the lines written while setting all this up. The real
+ledger should start on a clean page: it is the document that may one day be
+asked for as a record.
+
+Open the SQL editor:
+`https://supabase.com/dashboard/project/mzslslabhwbonpklpzcv/sql/new`
+
+Paste, then **Run**:
+
+```sql
+delete from tx_versions            where booth_id = '0403c685-eb17-4c5c-abd2-ed3b165198f7';
+delete from day_versions           where booth_id = '0403c685-eb17-4c5c-abd2-ed3b165198f7';
+delete from debt_entry_versions    where booth_id = '0403c685-eb17-4c5c-abd2-ed3b165198f7';
+delete from debt_account_versions  where booth_id = '0403c685-eb17-4c5c-abd2-ed3b165198f7';
+delete from commission_versions    where booth_id = '0403c685-eb17-4c5c-abd2-ed3b165198f7';
+```
+
+*Success. No rows returned.* The booth, the accounts and the access list are
+untouched — only the register is emptied.
+
+**Do this before touching the phones.** The other way round, a phone that syncs
+brings the old lines straight back.
+
+## 2. Install it on each device (2 min each)
+
+An app opened in a browser tab works, but only an **installed** one keeps
+working when the network drops — and at a booth, it will.
+
+| | |
+|---|---|
+| **iPhone** | Open the address in **Safari** (not Chrome) → the **Share** button (the square with an arrow) → **Add to Home Screen** |
+| **Android** | Open it in **Chrome** → the **⋮** menu → **Install app**, or **Add to Home screen** |
+| **PC** | Chrome, Edge or Brave → the small **install** icon at the right of the address bar |
+
+The address: `https://genseric1.github.io/momo-booth-ledger/`
+
+Then, **from the new icon**, not from the browser:
+
+1. Open the app.
+2. Sign in with your email and your password.
+3. If old test lines are still showing: **☰ → Settings → Erase local data**, then
+   sign in again. The page comes back empty, and stays that way.
+
+On an iPhone the installed app has its own storage, separate from Safari's, so
+it starts empty on its own — the sign-in is the only step.
+
+## 3. One last check, together
+
+Kojo writes a line on his phone. You watch it appear on yours. Five seconds,
+and you both know it works.
