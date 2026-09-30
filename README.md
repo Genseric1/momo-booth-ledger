@@ -155,8 +155,12 @@ versions after a cursor) can replace Supabase; see `js/sync.js`.
   the booth's own dashboard can read them. Store less rather than encrypt more.
 * Numbers are never sent to analytics or logs, and never put in a URL.
 * The PDF can be password-protected (PDF standard security handler, RC4-40).
-  That keeps a casual reader out of a file sent over WhatsApp; it is not strong
-  cryptography.
+  That keeps a casual reader out of a file sent over WhatsApp; it is **not**
+  strong cryptography, and the export screen says so rather than implying
+  otherwise. What protects the file is what is left out of it — numbers are
+  masked unless asked for. Upgrading to AES-256 (revision 6) is a bounded piece
+  of work; it should not ship without being opened in real readers first, since
+  a register nobody can open is worse than one weakly locked.
 
 > **Before real customer numbers go on a server**, confirm the obligations under
 > Ghana's Data Protection Act 2012 (Act 843), including registration with the

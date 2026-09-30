@@ -71,7 +71,8 @@ export function exportScreen(ctx) {
         el('div.field',
           el('input', { type: 'text', placeholder: 'Leave empty for no password', value: st.password,
             oninput: (e) => { st.password = e.target.value; } })),
-        el('p.note', { text: 'The PDF then asks for this password when it is opened. Useful when the file travels on WhatsApp.' }),
+        el('p.note', { text: 'The file then asks for it when opened. This is the PDF format’s own lock: it keeps a casual reader out, not somebody determined. Do not rely on it for anything you could not afford to lose.' }),
+        el('p.note', { text: 'What really protects this file is what is left out of it: customer numbers are masked unless the box above is ticked.' }),
       ]),
 
       el('button.big', { text: 'Generate PDF', onclick: () => generate(st, range) }),
