@@ -53,11 +53,17 @@ export function editLine(tx, ctx) {
         ? el('button.big.quiet', { text: 'Put the line back', style: { marginTop: '8px' }, onclick: async () => {
             await store.uncancelTx(tx.tx_id); toast('Line back'); close(); ctx.refresh();
           } })
-        : el('button.big.warn', { text: 'Strike out this line', style: { marginTop: '8px' }, onclick: async () => {
-            if (!await confirmSheet('Strike out', `${money(tx.amount)} — the line stays visible but leaves every total.`,
+        : el('button.big.quiet', { text: 'Strike out this line', style: { marginTop: '8px' }, onclick: async () => {
+            if (!await confirmSheet('Strike out', `${money(tx.amount)} — the line stays on the page with a red line through it, and leaves every total.`,
               { danger: true, okLabel: 'Strike out' })) return;
             await store.cancelTx(tx.tx_id); toast('Struck out'); closeSheet(); ctx.refresh();
           } }),
+      el('button.big.warn', { text: 'Delete this line', style: { marginTop: '8px' }, onclick: async () => {
+        if (!await confirmSheet('Delete the line',
+          `${money(tx.amount)} — written by mistake? The line leaves the page and the register for good. Strike it out instead if it really happened.`,
+          { danger: true, okLabel: 'Delete' })) return;
+        await store.deleteTx(tx.tx_id); toast('Line deleted'); closeSheet(); ctx.refresh();
+      } }),
     );
     render();
     return [];

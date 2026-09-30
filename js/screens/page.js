@@ -12,7 +12,6 @@ import { editLine } from './editline.js';
 
 const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'air', bundle: 'bdl' };
 const CLS = { cash_in: 'in', cash_out: 'out', airtime: 'other', bundle: 'other' };
-const DEBT_DIR = { lend: 'owes us', borrow: 'we owe', repay_received: 'paid back', repay_paid: 'we paid' };
 
 export function reportFor(date) {
   return dayReport({
@@ -26,7 +25,6 @@ export function reportFor(date) {
 export function pageScreen(ctx) {
   const rep = reportFor(ctx.date);
   const txs = store.dayTxs(ctx.date).slice().reverse();      // written downwards, like the page
-  const debts = store.dayDebtEntries(ctx.date).filter((e) => !e.cancelled);
   const mode = store.state.settings.numberStorage;
   const write = sync.canWrite();
 
@@ -37,17 +35,6 @@ export function pageScreen(ctx) {
     el('div.net', { text: WALLET_LABEL[t.wallet].toLowerCase() }),
     el('div.dir', { text: DIR[t.type] }),
     el('div.amt.num', { text: money(t.amount, { dp: 0 }) })));
-
-  /* a debt written at the counter sits among the lines of its day, oldest first
-     like everything else on the page */
-  for (const e of debts.slice().reverse()) {
-    const name = store.state.debtAccounts.find((a) => a.account_id === e.account_id)?.name || 'someone';
-    lines.push(el(`${write ? 'button' : 'div'}.line.debt`, { onclick: write ? () => ctx.go('debts') : null },
-      el('div.who', { text: name }),
-      el('div.net', { text: WALLET_LABEL[e.wallet].toLowerCase() }),
-      el('div.dir', { text: DEBT_DIR[e.kind] }),
-      el('div.amt.num', { text: money(e.amount, { dp: 0 }) })));
-  }
 
   return el('div.book',
     reminder(rep, ctx),

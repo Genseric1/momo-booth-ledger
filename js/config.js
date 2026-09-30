@@ -18,6 +18,12 @@ export const CONFIG = {
      false = anyone who has the link can use the app on their own device.
      It only takes effect once the three fields above are filled in.          */
   requireAccount: true,
+
+  /* Offer "Continue with Google", so the manager signs in with the booth's
+     own gmail address and keeps his password with Google. Turn the provider
+     on in Supabase first: Authentication -> Providers -> Google, and add this
+     site's address to the allowed redirect URLs.                             */
+  googleSignIn: true,
 };
 
 export const hasBackend = () => !!(CONFIG.supabaseUrl && CONFIG.supabaseKey && CONFIG.boothId);

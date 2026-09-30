@@ -86,6 +86,7 @@ create table if not exists tx_versions (
   note             text,
   cancelled        boolean not null default false,
   cancelled_at     timestamptz,
+  deleted          boolean not null default false,   -- written by mistake: off the register
   device           text,
   server_at        timestamptz not null default clock_timestamp()
 );
@@ -117,6 +118,7 @@ create table if not exists debt_entry_versions (
   agent       text,
   note        text,
   cancelled   boolean not null default false,
+  deleted     boolean not null default false,
   device      text,
   server_at   timestamptz not null default clock_timestamp()
 );

@@ -83,12 +83,16 @@ export async function reload() {
   state.raw = raw;
 
   state.days = project(raw.day_versions, 'date');
+  /* a deleted line leaves the register completely — it is still in the version
+     log, so two devices agree on the deletion, but nothing shows it again */
   state.txs = [...project(raw.tx_versions, 'tx_id').values()]
+    .filter((t) => !t.deleted)
     .sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : a.vid < b.vid ? 1 : -1));
   state.debtAccounts = [...project(raw.debt_account_versions, 'account_id').values()]
     .filter((a) => !a.archived)
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
   state.debtEntries = [...project(raw.debt_entry_versions, 'entry_id').values()]
+    .filter((e) => !e.deleted)
     .sort((a, b) => (a.time < b.time ? 1 : -1));
   state.commissions = [...project(raw.commission_versions, 'commission_id').values()]
     .sort((a, b) => a.month.localeCompare(b.month));
@@ -180,6 +184,7 @@ export async function addTx(fields) {
     note: fields.note || null,
     cancelled: false,
     cancelled_at: null,
+    deleted: false,
   }));
 }
 
@@ -196,10 +201,15 @@ export async function editTx(tx_id, patch) {
     sub_type: next.type === 'cash_in' ? (next.sub_type || null) : null,
     agent: next.agent || null, note: next.note || null,
     cancelled: !!next.cancelled, cancelled_at: next.cancelled_at || null,
+    deleted: !!next.deleted,
   }));
 }
 export const cancelTx = (tx_id) => editTx(tx_id, { cancelled: true, cancelled_at: new Date().toISOString() });
 export const uncancelTx = (tx_id) => editTx(tx_id, { cancelled: false, cancelled_at: null });
+
+/* Struck out is a correction the register keeps showing; deleted is a line that
+   should never have been written at all. Both are needed. */
+export const deleteTx = (tx_id) => editTx(tx_id, { deleted: true });
 
 /* ── debt accounts and entries ── */
 export async function addDebtAccount(name) {
@@ -227,11 +237,16 @@ export async function addDebtEntry(f) {
     agent: f.agent || null,
     note: f.note || null,
     cancelled: false,
+    deleted: false,
   }));
 }
 export async function cancelDebtEntry(entry_id) {
   const cur = state.debtEntries.find((e) => e.entry_id === entry_id);
   return write('debt_entry_versions', stamp({ ...cur, cancelled: true }));
+}
+export async function deleteDebtEntry(entry_id) {
+  const cur = state.debtEntries.find((e) => e.entry_id === entry_id);
+  return write('debt_entry_versions', stamp({ ...cur, deleted: true }));
 }
 
 /* ── monthly commissions (statistics only, never part of the daily total) ── */
@@ -260,7 +275,7 @@ export async function reencryptNumbers() {
     rows.push(stamp({
       tx_id: tx.tx_id, day: tx.day, time: tx.time, type: tx.type, wallet: tx.wallet,
       amount: tx.amount, sub_type: tx.sub_type, agent: tx.agent, note: tx.note,
-      cancelled: tx.cancelled, cancelled_at: tx.cancelled_at,
+      cancelled: tx.cancelled, cancelled_at: tx.cancelled_at, deleted: false,
       customer_number: await encryptField(tx.customer_number),
     }));
   }

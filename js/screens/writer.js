@@ -76,6 +76,9 @@ export function writerBar(ctx) {
   }
   function setMode(mode) {
     d.mode = mode;
+    /* the direction never carries over from a cash-out into a debt: it would
+       turn "he owes us" into "we owe him" without anything showing it */
+    d.dir = 'in';
     d.number = ''; d.name = ''; d.amount = ''; d.wallet = mode === 'debt' ? 'CASH' : null;
     number.value = '';
     number.type = mode === 'debt' ? 'text' : 'tel';

@@ -4,7 +4,7 @@ import { el, toast } from '../ui.js';
 import * as DB from '../db.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
-import { needsAccount } from '../config.js';
+import { needsAccount, CONFIG } from '../config.js';
 import { pinHash, unlock } from '../crypto.js';
 
 const logo = () => el('div', { style: { textAlign: 'center' } },
@@ -27,14 +27,31 @@ export function lockScreen(root) {
     });
     /* A signed-in device keeps its session, so a lost network never locks the
        agent out of his own page. */
-    if (needsAccount() && !sync.hasSession()) renderSignIn(root, pinDoor);
-    else pinDoor();
+    if (!needsAccount()) { pinDoor(); return; }
+    if (!sync.hasSession()) { renderSignIn(root, pinDoor); return; }
+    /* The tool belongs to one booth: an account that is not on its list is
+       turned away, whichever way it signed in. */
+    guardMembership().then((ok) => (ok ? pinDoor() : renderSignIn(root, pinDoor, notOnTheList())));
   });
 }
 
-function renderSignIn(root, next) {
+const notOnTheList = () => 'That account is not on this booth’s list. Ask the manager to add it.';
+
+/* A signed-in device checks, when it can, that the account still belongs to the
+   booth. Offline it trusts the role it remembers, so the network never locks
+   an agent out of his own page. */
+async function guardMembership() {
+  if (sync.status.role) return true;
+  if (!navigator.onLine) return true;
+  const role = await sync.refreshRole();
+  if (role) return true;
+  await sync.signOut();
+  return false;
+}
+
+function renderSignIn(root, next, firstError = null) {
   let email = '', password = '', busy = false;
-  const render = (error = null) => shell(root,
+  const render = (error = firstError) => shell(root,
     logo(),
     el('p.lead', { style: { textAlign: 'center', margin: '14px 0' },
       text: 'Sign in once on this phone. Afterwards the page opens with the PIN, with or without network.' }),
@@ -55,6 +72,7 @@ function renderSignIn(root, next) {
         busy = true; render();
         try {
           await sync.signIn(email, password);
+          if (!await guardMembership()) { busy = false; return render(notOnTheList()); }
         } catch (e) {
           busy = false;
           return render(
@@ -66,8 +84,15 @@ function renderSignIn(root, next) {
         next();
       },
     }),
+    CONFIG.googleSignIn
+      ? el('button.big.quiet', { text: 'Continue with Google', style: { marginTop: '10px' },
+          onclick: () => {
+            if (!navigator.onLine) return render('You need the network to sign in the first time.');
+            sync.googleSignIn();
+          } })
+      : null,
     el('p.note', { style: { textAlign: 'center' },
-      text: 'The manager creates the accounts. Ask him if you do not have one.' }));
+      text: 'This page belongs to one booth. Sign in with your own account — the manager puts it on the booth’s list.' }));
   render();
 }
 

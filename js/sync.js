@@ -10,6 +10,7 @@
 import * as DB from './db.js';
 import { STORE_NAMES } from './db.js';
 import { state, reload } from './store.js';
+import { hasBackend } from './config.js';
 
 export const status = { configured: false, online: navigator.onLine, signedIn: false,
   busy: false, lastSync: null, lastError: null, pendingCount: 0, email: null, role: null };
@@ -32,6 +33,7 @@ let session = null;                 // { access_token, refresh_token, expires_at
 
 export async function init() {
   session = await DB.getMeta('session', null);
+  if (hasBackend() && !session) await captureRedirectSession();
   const { url, key } = cfg();
   status.configured = !!(url && key);
   status.signedIn = !!session?.access_token;
@@ -64,6 +66,8 @@ async function rest(path, opts = {}) {
 }
 
 /* The role comes from the booth's own membership table. */
+export const refreshRole = () => loadRole();
+
 async function loadRole() {
   const booth = state.settings?.boothId;
   const uid = session?.user?.id;
@@ -78,6 +82,37 @@ async function loadRole() {
 }
 
 /* ── auth ── */
+/* Google sends the session back in the address bar; it is picked up here on the
+   next load and the address is cleaned so it is not left lying around. */
+export async function captureRedirectSession() {
+  const hash = location.hash.startsWith('#') ? new URLSearchParams(location.hash.slice(1)) : null;
+  const token = hash?.get('access_token');
+  if (!token) return false;
+  session = {
+    access_token: token,
+    refresh_token: hash.get('refresh_token'),
+    expires_at: Number(hash.get('expires_at')) || null,
+    user: null,
+  };
+  try {
+    const { url, key } = cfg();
+    const res = await fetch(`${url}/auth/v1/user`, { headers: { apikey: key, Authorization: `Bearer ${token}` } });
+    if (res.ok) session.user = await res.json();
+  } catch { /* the token still works; the name simply stays unknown */ }
+  await DB.setMeta('session', session);
+  history.replaceState(null, '', location.pathname + location.search);
+  status.signedIn = true;
+  status.email = session.user?.email || null;
+  await loadRole();
+  emit();
+  return true;
+}
+
+export function googleSignIn() {
+  const { url } = cfg();
+  const back = location.origin + location.pathname;
+  location.href = `${url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(back)}`;
+}
 export async function signIn(email, password) {
   const { url, key } = cfg();
   const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {

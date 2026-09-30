@@ -118,14 +118,14 @@ function settleSheet(ctx, person) {
         toast(value >= Math.abs(person.net) - 0.004 ? 'Settled' : 'Part paid back');
         close(); ctx.refresh();
       } }),
-      el('button.big.warn', { text: 'Cancel this debt', style: { marginTop: '8px' }, onclick: async () => {
-        if (!await confirmSheet('Cancel the debt',
-          'Written down by mistake? The entries are struck out and the money goes back where it was.',
-          { danger: true, okLabel: 'Cancel it' })) return;
-        for (const e of store.state.debtEntries.filter((e) => e.account_id === person.account_id && !e.cancelled)) {
-          await store.cancelDebtEntry(e.entry_id);
+      el('button.big.warn', { text: 'Delete this debt', style: { marginTop: '8px' }, onclick: async () => {
+        if (!await confirmSheet('Delete the debt',
+          'Written down by mistake? Every entry for this person is removed and the money goes back where it was.',
+          { danger: true, okLabel: 'Delete' })) return;
+        for (const e of store.state.debtEntries.filter((e) => e.account_id === person.account_id)) {
+          await store.deleteDebtEntry(e.entry_id);
         }
-        toast('Cancelled'); close(); ctx.refresh();
+        toast('Deleted'); close(); ctx.refresh();
       } }));
     render();
     return [];

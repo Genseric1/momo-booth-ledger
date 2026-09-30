@@ -5,9 +5,39 @@
 
 import { el, toast, fill, amountInput } from '../ui.js';
 import { WALLETS, WALLET_LABEL, money, dayLabel, addDays } from '../util.js';
+import { debtBalances } from '../calc.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import { reportFor } from './page.js';
+
+/* Who still owes, and who is still owed, as things stand on that day. A debt is
+   part of the capital, so this is where it belongs — beside the wallets that
+   were counted, not among the lines of the page. */
+function owing(upToDay) {
+  const bal = debtBalances(store.state.debtEntries.filter((e) => e.day <= upToDay));
+  return store.state.debtAccounts
+    .map((a) => ({ name: a.name, net: bal.perAccount.get(a.account_id)?.net || 0 }))
+    .filter((p) => Math.abs(p.net) > 0.004);
+}
+
+function debtBlock(upToDay, walletTotal) {
+  const people = owing(upToDay);
+  const debts = people.reduce((t, p) => t + p.net, 0);
+  if (!people.length && walletTotal == null) return null;
+  return el('div', { style: { marginTop: '18px' } },
+    people.length ? el('div.seclabel', el('span', { text: 'Owed' })) : null,
+    people.length ? el('div.rows', people.map((p) => el('div.r',
+      el('div', { text: p.name }, el('small', { text: p.net > 0 ? 'owes us' : 'we owe' })),
+      el('div.sp'),
+      el('div.v.num', { class: p.net > 0 ? 'pos' : 'neg', text: money(Math.abs(p.net), { dp: 0 }) })))) : null,
+    walletTotal == null ? null : el('div.rows',
+      el('div.r',
+        el('div', { text: 'Capital' }, el('small', { text: people.length ? 'wallets and people together' : 'what the booth is worth' })),
+        el('div.sp'),
+        el('div.v.num', { text: money(walletTotal + debts, { dp: 0 }) }))));
+}
+
+const sumOf = (o) => WALLETS.reduce((t, w) => t + (Number(o?.[w]) || 0), 0);
 
 /* A read-only account sees the figures as text, not as fields to fill. */
 function readOnly(field) {
@@ -46,7 +76,8 @@ export function morningScreen(ctx) {
     !sync.canWrite() ? null : el('button.big', {
       text: 'Save the morning count',
       onclick: async () => { await store.setOpening(ctx.date, vals, ctx.agent); toast('Morning saved'); ctx.go('page'); },
-    }));
+    }),
+    debtBlock(addDays(ctx.date, -1), rep.hasOpening ? sumOf(rep.opening) : null));
 }
 
 export function eveningScreen(ctx) {
@@ -114,6 +145,7 @@ function verdict(rep, ctx) {
           : 'A difference is not always a mistake: the fees you charge on top are not written line by line. Write your estimate above and it will be taken off.',
     }),
     rows,
+    debtBlock(ctx.date, sumOf(rep.real)),
     exact && WALLETS.some((w) => Math.abs(rep.gap[w]) > 0.005)
       ? el('p.note', { text: 'The total is right but the networks do not match one by one — some lines were probably written on the wrong network.' })
       : null,
