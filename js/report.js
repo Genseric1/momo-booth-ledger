@@ -6,6 +6,7 @@
    lines and nothing else, numbers masked.                                     */
 
 import { Pdf } from './pdf.js';
+import { LOGO, logoBytes } from './logo.js';
 import { WALLETS, NETWORKS, WALLET_LABEL, money, dayLabel, displayNumber, toP, toGhs, sum } from './util.js';
 import { dayReport, debtBalances } from './calc.js';
 
@@ -40,11 +41,15 @@ export function buildRegister({
     .filter((t) => o.cancelled || !t.cancelled)
     .sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : a.time < b.time ? -1 : 1));
 
+  const mark = pdf.image(logoBytes(), LOGO.width, LOGO.height);
+  const MARK = 34;
+
   const header = () => {
     y = M;
-    pdf.text(M, y + 12, boothName, { size: 15, bold: true, color: INK });
+    pdf.draw(mark, M, y - 4, MARK, MARK);
+    pdf.text(M + MARK + 10, y + 12, boothName, { size: 15, bold: true, color: INK });
     y += 18;
-    pdf.text(M, y + 10, `${dayLabel(range.start, { weekday: false })}  to  ${dayLabel(range.end, { weekday: false })}`,
+    pdf.text(M + MARK + 10, y + 10, `${dayLabel(range.start, { weekday: false })}  to  ${dayLabel(range.end, { weekday: false })}`,
       { size: 9.5, color: GREY });
     pdf.text(right, y + 10, `printed ${new Date().toLocaleDateString('en-GB')}`, { size: 8.5, color: FAINT, align: 'right' });
     y += 16;

@@ -12,6 +12,7 @@ import * as sync from '../sync.js';
 import { needsAccount, CONFIG } from '../config.js';
 
 const logo = () => el('div', { style: { textAlign: 'center' } },
+  el('img.mark', { src: 'icons/icon-192.png', alt: 'PACSBI Limited', width: 96, height: 96 }),
   el('h1', { text: 'MoMo Ledger' }),
   el('div.l2', { text: 'the booth page' }));
 

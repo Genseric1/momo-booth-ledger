@@ -2,16 +2,16 @@
    The shell is cached on install so the register opens with no network at all.
    Data never goes through here: it lives in IndexedDB and syncs separately.  */
 
-const CACHE = 'momo-ledger-v22';
+const CACHE = 'momo-ledger-v23';
 const SHELL = [
   '.', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/ui.js', 'js/util.js', 'js/calc.js', 'js/db.js',
-  'js/store.js', 'js/sync.js', 'js/crypto.js', 'js/config.js', 'js/pdf.js', 'js/pdfcrypt.js', 'js/report.js',
+  'js/store.js', 'js/sync.js', 'js/crypto.js', 'js/config.js', 'js/logo.js', 'js/pdf.js', 'js/pdfcrypt.js', 'js/report.js',
   'js/screens/page.js', 'js/screens/writer.js', 'js/screens/counts.js',
   'js/screens/menu.js', 'js/screens/editline.js', 'js/screens/debts.js', 'js/chart.js',
   'js/screens/calendar.js', 'js/screens/search.js',
   'js/screens/statistics.js', 'js/screens/exportpdf.js', 'js/screens/settings.js', 'js/screens/lock.js',
-  'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
 ];
 
 self.addEventListener('install', (e) => {

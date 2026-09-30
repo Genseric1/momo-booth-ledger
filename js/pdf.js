@@ -55,6 +55,17 @@ export class Pdf {
   addPage() { this.ops = []; this.pages.push(this.ops); return this.pages.length; }
   get pageCount() { return this.pages.length; }
 
+  /* A JPEG goes into the file exactly as it is — PDF reads that format itself,
+     so nothing has to be decoded to print a logo. */
+  image(bytes, width, height) {
+    this.images ||= [];
+    this.images.push({ bytes, width, height });
+    return `Im${this.images.length - 1}`;
+  }
+  draw(name, x, y, w, h) {
+    this.ops.push(`q ${num(w)} 0 0 ${num(h)} ${num(x)} ${num(this.h - y - h)} cm /${name} Do Q`);
+  }
+
   text(x, y, str, { size = 9, bold = false, color = [0, 0, 0], align = 'left', strike = false } = {}) {
     const s = esc(str);
     const w = widthOf(str, size, bold);
@@ -100,10 +111,16 @@ export class Pdf {
     /* object 1 catalog, 2 pages, 3 F1, 4 F2, 5 info, [6 encrypt], then per page
        a page object and a content stream. */
     const encObj = sec ? 1 : 0;
-    const first = 6 + encObj;
+    const imgs = this.images || [];
+    const imgFirst = 6 + encObj;
+    const imgIds = imgs.map((_, i) => imgFirst + i);
+    const first = imgFirst + imgs.length;
     const pageIds = this.pages.map((_, i) => first + i * 2);
     const streamIds = this.pages.map((_, i) => first + i * 2 + 1);
     const objects = new Map();
+    const xobjects = imgs.length
+      ? ` /XObject << ${imgs.map((_, i) => `/Im${i} ${imgIds[i]} 0 R`).join(' ')} >>`
+      : '';
 
     objects.set(1, `<< /Type /Catalog /Pages 2 0 R >>`);
     objects.set(2, `<< /Type /Pages /Count ${this.pages.length} /Kids [${pageIds.map((i) => `${i} 0 R`).join(' ')}] >>`);
@@ -112,9 +129,16 @@ export class Pdf {
     objects.set(5, `<< /Title (${esc(this.title)}) /Author (${esc(this.author)}) /Producer (MoMo Booth Ledger) /CreationDate (D:${stampDate()}) >>`);
     if (sec) objects.set(6, `<< /Filter /Standard /V 1 /R 2 /O <${hex(sec.O)}> /U <${hex(sec.U)}> /P ${sec.permissions} >>`);
 
+    imgs.forEach((img, i) => {
+      objects.set(imgIds[i], {
+        raw: img.bytes,
+        dict: `<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} `
+          + `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode`,
+      });
+    });
     this.pages.forEach((ops, i) => {
       objects.set(pageIds[i], `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${num(this.w)} ${num(this.h)}] ` +
-        `/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${streamIds[i]} 0 R >>`);
+        `/Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xobjects} >> /Contents ${streamIds[i]} 0 R >>`);
       objects.set(streamIds[i], { stream: ops.join('\n') });
     });
 
@@ -128,9 +152,9 @@ export class Pdf {
         const out = sec && id === 5 ? encryptInfo(body, sec, id) : body;
         pushStr(`${id} 0 obj\n${out}\nendobj\n`);
       } else {
-        let data = enc.encode(body.stream);
+        let data = body.raw ? body.raw : enc.encode(body.stream);
         if (sec) data = rc4(sec.objectKey(id), data);
-        pushStr(`${id} 0 obj\n<< /Length ${data.length} >>\nstream\n`);
+        pushStr(`${id} 0 obj\n${body.dict || '<<'} /Length ${data.length} >>\nstream\n`);
         push(data);
         pushStr('\nendstream\nendobj\n');
       }

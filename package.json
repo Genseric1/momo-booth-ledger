@@ -6,7 +6,6 @@
   "type": "module",
   "scripts": {
     "start": "node serve.mjs",
-    "icons": "node tools/make-icons.mjs",
     "test": "node --test tests/acceptance.test.mjs tests/sync.test.mjs tests/number.test.mjs"
   },
   "dependencies": {},
