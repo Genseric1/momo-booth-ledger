@@ -99,6 +99,15 @@ export function settingsScreen(ctx) {
         el('p.note', { text: 'Given a password to get started? Change it here — nobody else needs to know the new one.' }),
       ]),
 
+      card('Exported registers', [
+        el('div.field',
+          el('label', { text: 'Password put on every export' }),
+          el('input', { type: 'text', value: s.exportPassword || '', placeholder: 'none — registers open freely',
+            onchange: (e) => store.saveSettings({ exportPassword: e.target.value.trim() }).then(ctx.refresh) })),
+        el('p.note', { text: 'Set once, and every register that leaves this device carries it. Leave it empty and they open freely.' }),
+        el('p.note', { text: 'It is the PDF format’s own lock: a speed bump, not a safe. And whoever receives a register needs this password to read it — give it to them by another route than the file itself.' }),
+      ]),
+
       card('Backup', [
         el('p.lead', { text: 'A backup file holds every version row of this device, including the encrypted customer numbers.' }),
         el('div.r', { style: { marginTop: '10px' } },

@@ -49,6 +49,7 @@ export const DEFAULT_SETTINGS = {
   supabaseKey: '',
   boothId: '',
   cryptoBoothId: '',        // the booth id the stored numbers are encrypted under
+  exportPassword: '',       // put on every register that leaves the app
 };
 
 export async function init() {

@@ -26,6 +26,8 @@ const OPTIONS = [
 export function exportScreen(ctx) {
   const st = ctx.exportState;
   const range = rangeOf(st);
+  const booth = store.state.settings.exportPassword || '';
+  const password = st.password === null ? booth : st.password;
   const count = store.state.txs.filter((t) => t.day >= range.start && t.day <= range.end
     && (st.options.cancelled || !t.cancelled)).length;
 
@@ -51,7 +53,7 @@ export function exportScreen(ctx) {
                   onchange: (e) => { st.anchor = `${e.target.value}-01`; ctx.refresh(); } })
               : el('input', { type: 'date', value: st.anchor, max: today(),
                   onchange: (e) => { st.anchor = e.target.value; ctx.refresh(); } })),
-        el('p.note', { text: `${dayLabel(range.start, { weekday: false })} → ${dayLabel(range.end, { weekday: false })} · ${count} lines` }),
+        el('p.note', { text: `${dayLabel(range.start, { weekday: false })} → ${dayLabel(range.end, { weekday: false })} · ${count} line${count === 1 ? '' : 's'}` }),
       ]),
 
       card('Options', [
@@ -69,13 +71,15 @@ export function exportScreen(ctx) {
 
       card('Password (optional)', [
         el('div.field',
-          el('input', { type: 'text', placeholder: 'Leave empty for no password', value: st.password,
-            oninput: (e) => { st.password = e.target.value; } })),
-        el('p.note', { text: 'The file then asks for it when opened. This is the PDF format’s own lock: it keeps a casual reader out, not somebody determined. Do not rely on it for anything you could not afford to lose.' }),
-        el('p.note', { text: 'What really protects this file is what is left out of it: customer numbers are masked unless the box above is ticked.' }),
+          el('input', { type: 'text', placeholder: 'Leave empty for no password', value: password,
+            oninput: (e) => { st.password = e.target.value; ctx.refresh(); } })),
+        password
+          ? el('p.note', { text: 'Every register you export carries this password. Whoever receives the file needs it to open it.' })
+          : el('p.note', { style: { color: 'var(--red)' }, text: 'This register will open without a password. Set one in Settings to lock every export.' }),
+        el('p.note', { text: 'This is the PDF format’s own lock: it keeps a casual reader out, not somebody determined. What really protects the file is what is left out of it — customer numbers are masked unless the box above is ticked.' }),
       ]),
 
-      el('button.big', { text: 'Generate PDF', onclick: () => generate(st, range) }),
+      el('button.big', { text: 'Generate PDF', onclick: () => generate(st, range, password) }),
     ),
     el('div', card('What the file looks like', [
       el('p.lead', { text: 'The page, printed: the date as a heading, then one line each — the number, the network, in or out, the amount. It can be handed over as a record.' }),
@@ -105,14 +109,14 @@ function rangeOf(st) {
   return { start: `${a.slice(0, 4)}-01-01`, end: `${a.slice(0, 4)}-12-31` };
 }
 
-function generate(st, range) {
+function generate(st, range, password) {
   try {
     const bytes = buildRegister({
       boothName: store.state.settings.boothName,
       range, days: store.state.days, txs: store.state.txs,
       debtEntries: store.state.debtEntries, debtAccounts: store.state.debtAccounts,
       commissions: store.state.commissions,
-      options: st.options, password: st.password,
+      options: st.options, password,
     });
     const blob = new Blob([bytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
@@ -128,7 +132,10 @@ function generate(st, range) {
 }
 
 export const initialExportState = () => ({
-  scope: 'day', anchor: today(), from: today(), to: today(), password: '',
+  scope: 'day', anchor: today(), from: today(), to: today(),
+  /* null means untouched: the booth's own password is used, whatever it is
+     at the moment of the export */
+  password: null,
   options: { balances: false, statistics: false, extras: false, cancelled: false,
     debts: false, agents: false, fullNumbers: false },
 });
