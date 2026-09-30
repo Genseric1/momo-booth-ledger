@@ -19,7 +19,19 @@ const W_BOLD = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,
   556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,
   389,280,389,584];
 
-const ascii = (s) => String(s ?? '').replace(/[^\x20-\x7e]/g, (c) => ({ '’': "'", '‘': "'", '“': '"', '”': '"', '–': '-', '—': '-', '₵': 'C' }[c] || '?'));
+/* The font we embed carries plain ASCII, so an accented name is folded rather
+   than turned into question marks: Sephora reads, S?phora does not. */
+const FOLD = {
+  'à': 'a', 'á': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a', 'å': 'a',
+  'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+  'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+  'ò': 'o', 'ó': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o',
+  'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
+  'ç': 'c', 'ñ': 'n', 'ÿ': 'y',
+  '’': "'", '‘': "'", '“': '"', '”': '"', '–': '-', '—': '-', '·': '-', '₵': 'C',
+};
+const ascii = (s) => String(s ?? '')
+  .replace(/[^ -~]/g, (c) => FOLD[c] ?? FOLD[c.toLowerCase()]?.toUpperCase() ?? '?');
 export function widthOf(text, size, bold = false) {
   const t = ascii(text), tab = bold ? W_BOLD : W_REG;
   let w = 0;

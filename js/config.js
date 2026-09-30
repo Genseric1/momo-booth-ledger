@@ -19,11 +19,19 @@ export const CONFIG = {
      It only takes effect once the three fields above are filled in.          */
   requireAccount: true,
 
-  /* Offer "Continue with Google", so the manager signs in with the booth's
-     own gmail address and keeps his password with Google. Turn the provider
-     on in Supabase first: Authentication -> Providers -> Google, and add this
-     site's address to the allowed redirect URLs.                             */
+  /* Offer "Continue with Google", so the manager signs in with his own gmail
+     address and keeps his password with Google. Turn the provider on in
+     Supabase first: Authentication -> Providers -> Google, and add this site's
+     address to the allowed redirect URLs.                                    */
   googleSignIn: true,
+
+  /* The people of the booth, in the order they appear on the entry screen.
+     Set here rather than on each phone, so every device shows the same list.
+     Leave empty and each device keeps its own.                               */
+  agents: ['Kojo', 'Modeste', 'Codjo', 'Séphora', 'Pio', 'Fofana', 'Anherma', 'Djamale'],
+
+  /* Who is writing unless someone says otherwise — the one who runs the booth. */
+  defaultAgent: 'Kojo',
 };
 
 export const hasBackend = () => !!(CONFIG.supabaseUrl && CONFIG.supabaseKey && CONFIG.boothId);

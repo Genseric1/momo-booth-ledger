@@ -15,6 +15,7 @@ import { statsScreen } from './screens/statistics.js';
 import { exportScreen, initialExportState } from './screens/exportpdf.js';
 import { settingsScreen } from './screens/settings.js';
 import { searchScreen } from './screens/search.js';
+import { CONFIG } from './config.js';
 import { openCalendar, closeCalendar } from './screens/calendar.js';
 
 const SCREENS = {
@@ -28,7 +29,7 @@ const TITLE = { menu: 'Menu', morning: 'Morning', evening: 'Evening', debts: 'De
 const ctx = {
   view: 'page',
   date: today(),
-  agent: null,
+  agent: CONFIG.defaultAgent || null,
   draft: emptyDraft(),
   statsPreset: 'week',
   statsCustom: {},

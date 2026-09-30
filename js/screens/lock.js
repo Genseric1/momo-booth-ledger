@@ -142,8 +142,10 @@ function renderSetup(root, resolve) {
         el('p.lead', { style: { textAlign: 'center', margin: '14px 0' }, text: 'Set up this booth once. It works offline afterwards.' }),
         el('div.field', el('label', { text: 'Booth name' }),
           el('input', { value: st.booth, oninput: (e) => { st.booth = e.target.value; } })),
-        el('div.field', el('label', { text: 'Agents, separated by commas (optional)' }),
-          el('input', { placeholder: 'Kofi, Ama', oninput: (e) => { st.agentsRaw = e.target.value; } })),
+        CONFIG.agents?.length
+          ? el('p.note', { text: `Who writes: ${CONFIG.agents.join(', ')}. Pick the one at the counter from the menu.` })
+          : el('div.field', el('label', { text: 'Agents, separated by commas (optional)' }),
+              el('input', { placeholder: 'Kofi, Ama', oninput: (e) => { st.agentsRaw = e.target.value; } })),
         el('button.big', { text: 'Continue', onclick: () => { st.step = 2; render(); } }));
       return;
     }
@@ -160,7 +162,9 @@ function renderSetup(root, resolve) {
         st.confirming = true; render(); return;
       }
       if (st.pin !== st.again) { st.again = ''; st.confirming = false; st.pin = ''; render(); return toast('The two PINs differ', { error: true }); }
-      const agents = (st.agentsRaw || '').split(',').map((a) => a.trim()).filter(Boolean);
+      const agents = CONFIG.agents?.length
+        ? CONFIG.agents
+        : (st.agentsRaw || '').split(',').map((a) => a.trim()).filter(Boolean);
       await store.saveSettings({ boothName: st.booth.trim() || 'Booth', agents });
       const booth = store.state.settings.boothId || 'local';
       await DB.setMeta('pinHash', await pinHash(st.pin, booth));

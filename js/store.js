@@ -55,6 +55,9 @@ export async function init() {
   await DB.open();
   const saved = await DB.getMeta('settings', null);
   state.settings = { ...DEFAULT_SETTINGS, ...(saved || {}) };
+  /* The people of the booth come from the deployment too: one list, the same
+     on every phone, and nobody has to type it. */
+  if (CONFIG.agents?.length) state.settings.agents = CONFIG.agents;
   /* The deployment decides where the booth lives; a device cannot drift from it. */
   if (hasBackend()) {
     state.settings.supabaseUrl = CONFIG.supabaseUrl;

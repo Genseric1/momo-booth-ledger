@@ -5,7 +5,7 @@ import * as store from '../store.js';
 import * as sync from '../sync.js';
 import * as DB from '../db.js';
 import { pinHash, unlock } from '../crypto.js';
-import { hasBackend, needsAccount } from '../config.js';
+import { hasBackend, needsAccount, CONFIG } from '../config.js';
 
 const NUMBER_MODES = [
   { value: 'masked', label: 'Masked' }, { value: 'last4', label: 'Last 4 only' },
@@ -21,13 +21,17 @@ export function settingsScreen(ctx) {
       card('Booth', [
         el('div.field', el('label', { text: 'Booth name' }),
           el('input', { value: s.boothName, onchange: (e) => store.saveSettings({ boothName: e.target.value || 'Booth' }).then(ctx.refresh) })),
-        el('div.field', el('label', { text: 'Agents' }),
-          el('div.pick', [
-            ...s.agents.map((a) => el('button', { text: `${a}  ✕`, onclick: async () => {
-              await store.removeAgent(a); ctx.refresh();
-            } })),
-            el('button', { text: '+ add', onclick: () => addAgentSheet(ctx) }),
-          ])),
+        el('div.field', el('label', { text: 'Who writes' }),
+          CONFIG.agents?.length
+            ? el('div',
+                el('div.pick', CONFIG.agents.map((a) => el('button', { text: a, disabled: true }))),
+                el('p.note', { text: 'This list belongs to the booth, not to this phone. It is changed in the deployment so every device shows the same names.' }))
+            : el('div.pick', [
+                ...s.agents.map((a) => el('button', { text: `${a}  ✕`, onclick: async () => {
+                  await store.removeAgent(a); ctx.refresh();
+                } })),
+                el('button', { text: '+ add', onclick: () => addAgentSheet(ctx) }),
+              ])),
         el('p.note', { text: `Pick who is writing from the menu. This device: ${s.device}` }),
       ]),
 

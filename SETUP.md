@@ -101,9 +101,37 @@ insert into booth_members (booth_id, user_id, role) values
 ```
 
    Roles: `manager` and `agent` can write the register; `viewer` can only read
-   it — that is the one for a boss who should never touch a line.
+   it — the database refuses every line a viewer tries to write, and the app
+   hides the pen from him.
 4. They sign in again. They are in, and from then on every device of the booth
    shows the same page.
+
+### The four to start with
+
+Kojo runs the MoMo business and writes nearly every line, so the app already
+stamps his name on a line unless someone picks another from the menu.
+
+| Person | Role to give | Why |
+|---|---|---|
+| **Kojo** | `manager` | he runs the booth and writes the register |
+| **Modeste** | `manager` | you — full access |
+| **Codjo** (CEO) | `viewer` | reads everything, cannot touch a line |
+| **Séphora** (COO) | `viewer` | same |
+
+Change `viewer` to `agent` for anyone who should also be able to write. Once
+each of the four has signed in once and sent you their id:
+
+```sql
+insert into booth_members (booth_id, user_id, role) values
+  ('BOOTH-ID', 'KOJO-ID',     'manager'),
+  ('BOOTH-ID', 'MODESTE-ID',  'manager'),
+  ('BOOTH-ID', 'CODJO-ID',    'viewer'),
+  ('BOOTH-ID', 'SEPHORA-ID',  'viewer');
+```
+
+The other four — Pio, Fofana, Anherma, Djamale — already appear in the list of
+who can be named on a line. Give them an account the same way, the day they
+need one.
 
 ---
 
