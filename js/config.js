@@ -17,13 +17,13 @@ export const CONFIG = {
   /* true  = the page asks for an account before it opens.
      false = anyone who has the link can use the app on their own device.
      It only takes effect once the three fields above are filled in.          */
-  requireAccount: false,   // turn on once the accounts exist, or nobody gets in
+  requireAccount: true,
 
   /* Offer "Continue with Google", so the manager signs in with his own gmail
      address and keeps his password with Google. Turn the provider on in
      Supabase first: Authentication -> Providers -> Google, and add this site's
      address to the allowed redirect URLs.                                    */
-  googleSignIn: true,
+  googleSignIn: false,     // turn on once the Google provider is set up in Supabase
 
   /* The people of the booth, in the order they appear on the entry screen.
      Set here rather than on each phone, so every device shows the same list.
