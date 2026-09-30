@@ -227,3 +227,20 @@ svg.spark { width:100%; height:110px; display:block; }
 
 /* stacked full-width buttons must not touch */
 .big + .big { margin-top:8px; }
+
+/* ── the count sheet: wallets to fill, people already written, then the total ── */
+.countsheet { margin:4px 0 18px; }
+.countrow { display:grid; grid-template-columns:1fr 132px; align-items:center; gap:12px;
+  padding:9px 0; border-bottom:1px solid var(--rule2); }
+.countrow label { margin:0; font-size:15px; text-transform:none; letter-spacing:0;
+  color:var(--ink); font-weight:600; }
+.countrow label small { display:block; font-size:11.5px; color:var(--faint); font-weight:400; margin-top:2px; }
+.countrow input { border:none; border-bottom:1.5px solid var(--rule); background:transparent;
+  padding:7px 2px; font-size:18px; font-weight:700; text-align:right; outline:none; width:100%; }
+.countrow input:focus { border-color:var(--gold); }
+.countrow .v { text-align:right; font-size:18px; font-weight:700; }
+.countrow.owed { background:#FBF8EF; padding-left:8px; padding-right:8px; }
+.countrow.owed label { font-weight:700; }
+.countrow.total { border-bottom:none; border-top:2px solid var(--ink); margin-top:4px; padding-top:12px; }
+.countrow.total label { font-weight:800; letter-spacing:.5px; }
+.countrow.total .v { font-size:24px; font-weight:800; border-bottom:3px double var(--ink); padding-bottom:2px; }

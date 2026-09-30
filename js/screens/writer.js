@@ -6,12 +6,11 @@
 import { el, toast } from '../ui.js';
 import {
   WALLET_LABEL, walletFromNumber, groupNumber, groupAmount, parseAmount,
-  acceptNumberInput, NUMBER_LENGTH, isCompleteNumber,
+  acceptNumberInput, NUMBER_LENGTH, isCompleteNumber, money,
 } from '../util.js';
 import * as store from '../store.js';
 
 const TYPE_OF = { in: 'cash_in', out: 'cash_out', air: 'airtime', bdl: 'bundle' };
-const LABEL = { in: 'in', out: 'out', air: 'airtime', bdl: 'bundle' };
 
 /* The same pen writes a debt: the number becomes a name, in/out become who
    owes whom. Writing it where the lines are written is the whole point — a
@@ -53,8 +52,8 @@ export function writerBar(ctx) {
   const done = el('button.pen-ok', { text: '✓', title: 'write the line (Enter)', onclick: () => save() });
 
   const bar = el('div.pen', number, dirs, amount, done);
-  const more = el('button.pen-more', { text: 'airtime', onclick: () => setDir(d.dir === 'air' ? 'in' : 'air') });
-  const bundle = el('button.pen-more', { text: 'bundle', onclick: () => setDir(d.dir === 'bdl' ? 'in' : 'bdl') });
+  const more = el('button.pen-more', { text: 'a — airtime', onclick: () => setDir(d.dir === 'air' ? 'in' : 'air') });
+  const bundle = el('button.pen-more', { text: 'b — bundle', onclick: () => setDir(d.dir === 'bdl' ? 'in' : 'bdl') });
   const debt = el('button.pen-more', { text: 'debt', onclick: () => setMode(debtMode() ? 'line' : 'debt') });
   const row2 = el('div.pen-row2', net, more, bundle, debt);
   const wrap = el('div.writer', bar, row2);
@@ -67,7 +66,8 @@ export function writerBar(ctx) {
         text: debtMode() ? 'we owe' : 'out', onclick: () => setDir('out') }));
     more.hidden = bundle.hidden = debtMode();
     debt.classList.toggle('on', debtMode());
-    for (const b of [more, bundle]) b.classList.toggle('on', LABEL[d.dir] === b.textContent);
+    more.classList.toggle('on', d.dir === 'air');
+    bundle.classList.toggle('on', d.dir === 'bdl');
   }
   function paintNet() {
     const w = d.wallet || (debtMode() ? 'CASH' : walletFromNumber(d.number));

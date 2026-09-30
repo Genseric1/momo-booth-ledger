@@ -6,7 +6,7 @@ import { el, fill } from '../ui.js';
 import { WALLET_LABEL, money, dayLabel, displayNumber, normalizeNumber } from '../util.js';
 import * as store from '../store.js';
 
-const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'air', bundle: 'bdl' };
+const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'a', bundle: 'b' };
 
 export function searchScreen(ctx) {
   const out = el('div.sheetview');

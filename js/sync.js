@@ -40,6 +40,9 @@ let session = null;                 // { access_token, refresh_token, expires_at
 export async function init() {
   session = await DB.getMeta('session', null);
   if (hasBackend() && !session) await captureRedirectSession();
+  /* the token lasts an hour; renew it before anything asks the server a
+     question, or the answer comes back as "who are you?" */
+  if (session && expiringSoon()) await refresh();
   const { url, key } = cfg();
   status.configured = !!(url && key);
   status.signedIn = !!session?.access_token;
@@ -72,7 +75,7 @@ async function rest(path, opts = {}) {
 }
 
 /* The role comes from the booth's own membership table. */
-export const refreshRole = () => loadRole();
+export const refreshRole = async () => (await loadRole()).role ?? null;
 
 /* Signing in is not the same as being let in: the account must be on the
    booth's list. Offline, the remembered role is trusted, so a lost network
@@ -80,7 +83,11 @@ export const refreshRole = () => loadRole();
 export async function ensureMembership() {
   if (status.role) return { ok: true };
   if (!navigator.onLine) return { ok: true };
-  if (await loadRole()) return { ok: true };
+  const answer = await loadRole();
+  if (answer.role) return { ok: true };
+  /* the server never said no — it said nothing. Nobody is signed out over a
+     network hiccup or a token that simply needed renewing. */
+  if (!answer.asked) return { ok: true };
   const who = session?.user || null;
   await signOut();
   return { ok: false, email: who?.email || null, id: who?.id || null };
@@ -90,17 +97,28 @@ export const notOnTheList = (who) => "That account is not on this booth's list y
   + (who?.email ? ` Give the manager this: ${who.email}` : '')
   + (who?.id ? ` (id ${who.id})` : '');
 
+/* { asked: false } when the server could not be reached or would not answer —
+   which is NOT the same as "this account is not a member", and must never be
+   treated as one. */
 async function loadRole() {
   const booth = state.settings?.boothId;
   const uid = session?.user?.id;
-  if (!booth || !uid) return null;
-  try {
-    const rows = await rest(`/rest/v1/booth_members?select=role&booth_id=eq.${booth}&user_id=eq.${uid}`);
-    status.role = rows?.[0]?.role || null;
-    await DB.setMeta('role', status.role);
-    emit();
-  } catch { /* keep the remembered role */ }
-  return status.role;
+  if (!booth || !uid) return { asked: false };
+  const query = `/rest/v1/booth_members?select=role&booth_id=eq.${booth}&user_id=eq.${uid}`;
+  for (const attempt of [1, 2]) {
+    try {
+      const rows = await rest(query);
+      status.role = rows?.[0]?.role || null;
+      await DB.setMeta('role', status.role);
+      emit();
+      return { asked: true, role: status.role };
+    } catch (e) {
+      /* an expired token reads as a refusal; renew it once and ask again */
+      if (attempt === 1 && String(e.message).startsWith('401') && await refresh()) continue;
+      return { asked: false };
+    }
+  }
+  return { asked: false };
 }
 
 /* ── auth ── */
@@ -175,6 +193,12 @@ export async function signOut() {
   await DB.setMeta('role', null);
   status.signedIn = false; status.email = null; status.role = null; emit();
 }
+/* true when the token is gone or about to be */
+function expiringSoon() {
+  if (!session?.expires_at) return false;
+  return session.expires_at * 1000 - Date.now() < 120000;
+}
+
 async function refresh() {
   if (!session?.refresh_token) return false;
   const { url, key } = cfg();
@@ -242,6 +266,7 @@ async function doSync() {
   let pushed = 0, pulled = 0;
   try {
     if (!status.role) await loadRole();
+    if (expiringSoon()) await refresh();
     for (const s of STORE_NAMES) {
       if (!canWrite()) { pulled += await pullStore(s); continue; }   // a viewer only reads
       try { pushed += await pushStore(s); }

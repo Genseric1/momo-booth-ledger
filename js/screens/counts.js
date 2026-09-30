@@ -20,24 +20,32 @@ function owing(upToDay) {
     .filter((p) => Math.abs(p.net) > 0.004);
 }
 
-function debtBlock(upToDay, walletTotal) {
+/* The sheet of the day: the four wallets to fill in, then every person who
+   still owes or is still owed, already written down, and the total underneath.
+   The people are part of the capital — leaving them out would make the total
+   disagree with the lines above it. */
+const sumOf = (o) => WALLETS.reduce((t, w) => t + (Number(o?.[w]) || 0), 0);
+
+function countSheet(vals, upToDay, { hint = null } = {}) {
   const people = owing(upToDay);
   const debts = people.reduce((t, p) => t + p.net, 0);
-  if (!people.length && walletTotal == null) return null;
-  return el('div', { style: { marginTop: '18px' } },
-    people.length ? el('div.seclabel', el('span', { text: 'Owed' })) : null,
-    people.length ? el('div.rows', people.map((p) => el('div.r',
-      el('div', { text: p.name }, el('small', { text: p.net > 0 ? 'owes us' : 'we owe' })),
-      el('div.sp'),
-      el('div.v.num', { class: p.net > 0 ? 'pos' : 'neg', text: money(Math.abs(p.net), { dp: 0 }) })))) : null,
-    walletTotal == null ? null : el('div.rows',
-      el('div.r',
-        el('div', { text: 'Capital' }, el('small', { text: people.length ? 'wallets and people together' : 'what the booth is worth' })),
-        el('div.sp'),
-        el('div.v.num', { text: money(walletTotal + debts, { dp: 0 }) }))));
-}
+  const total = el('div.v.num');
+  const retotal = () => { total.textContent = money(sumOf(vals) + debts, { dp: 0 }); };
 
-const sumOf = (o) => WALLETS.reduce((t, w) => t + (Number(o?.[w]) || 0), 0);
+  const rows = WALLETS.map((w) => el('div.countrow',
+    el('label', { for: `count-${w}`, text: w === 'CASH' ? 'Cash in the box' : WALLET_LABEL[w] },
+      hint ? el('small', { text: hint(w) }) : null),
+    amountInput({ value: vals[w] ?? '', oninput: (v) => { vals[w] = v; retotal(); } })));
+  rows.forEach((row, i) => row.querySelector('input').id = `count-${WALLETS[i]}`);
+
+  retotal();
+  return el('div.countsheet',
+    ...rows,
+    ...people.map((p) => el('div.countrow.owed',
+      el('label', { text: p.name }, el('small', { text: p.net > 0 ? 'owes us' : 'we owe' })),
+      el(`div.v.num.${p.net > 0 ? 'pos' : 'neg'}`, { text: money(p.net, { sign: p.net < 0, dp: 0 }) }))),
+    el('div.countrow.total', el('label', { text: 'TOTAL' }), total));
+}
 
 /* A read-only account sees the figures as text, not as fields to fill. */
 function readOnly(field) {
@@ -53,9 +61,9 @@ export function morningScreen(ctx) {
   const prev = reportFor(addDays(ctx.date, -1));
   const vals = { ...(rep.hasOpening ? rep.opening : {}) };
 
-  const fields = WALLETS.map((w) => el('div.field',
-    el('label', { text: w === 'CASH' ? 'Cash in the box' : `${WALLET_LABEL[w]} float` }),
-    amountInput({ value: vals[w] ?? '', oninput: (v) => { vals[w] = v; } })));
+  /* every debt still standing shows at both counts, until it is paid back */
+  const sheet = countSheet(vals, ctx.date);
+  if (!sync.canWrite()) readOnly(sheet);
 
   return el('div.sheetview',
     el('h2', { text: `Morning — ${dayLabel(ctx.date, { weekday: false })}` }),
@@ -64,20 +72,20 @@ export function morningScreen(ctx) {
       text: `Take yesterday's evening count (${money(prev.realCapital, { dp: 0 })})`,
       style: { marginBottom: '18px' },
       onclick: () => {
-        WALLETS.forEach((w, i) => {
-          const input = fields[i].querySelector('input');
+        for (const w of WALLETS) {
+          const input = sheet.querySelector(`#count-${w}`);
           input.value = money(prev.real[w], { dp: 0 });
           vals[w] = String(prev.real[w]);
-        });
+          input.dispatchEvent(new Event('input'));
+        }
         toast('Copied — check it before saving');
       },
     }) : null,
-    ...(sync.canWrite() ? fields : fields.map(readOnly)),
+    sheet,
     !sync.canWrite() ? null : el('button.big', {
       text: 'Save the morning count',
       onclick: async () => { await store.setOpening(ctx.date, vals, ctx.agent); toast('Morning saved'); ctx.go('page'); },
-    }),
-    debtBlock(addDays(ctx.date, -1), rep.hasOpening ? sumOf(rep.opening) : null));
+    }));
 }
 
 export function eveningScreen(ctx) {
@@ -87,19 +95,15 @@ export function eveningScreen(ctx) {
   const out = el('div.sheetview');
 
   const render = () => {
-    const fields = WALLETS.map((w) => el('div.field',
-      el('label', { text: w === 'CASH' ? 'Cash in the box' : `${WALLET_LABEL[w]} float` },
-      ),
-      amountInput({
-        value: vals[w] ?? '', placeholder: money(rep.expected[w], { dp: 0 }),
-        oninput: (v) => { vals[w] = v; },
-      }),
-      el('div.hint', { text: `the page says ${money(rep.expected[w], { dp: 0 })}` })));
+    const sheet = countSheet(vals, ctx.date, {
+      hint: (w) => `the page says ${money(rep.expected[w], { dp: 0 })}`,
+    });
+    if (!sync.canWrite()) readOnly(sheet);
 
-    fill(out, 
+    fill(out,
       el('h2', { text: `Evening — ${dayLabel(ctx.date, { weekday: false })}` }),
       el('p.lead', { text: 'Count for real. This is the number that matters.' }),
-      ...(sync.canWrite() ? fields : fields.map(readOnly)),
+      sheet,
       !sync.canWrite() ? null : el('div.field',
         el('label', { text: 'Extra fees you collected today (if you know)' }),
         amountInput({ value: extras, placeholder: 'optional', oninput: (v) => { extras = v; } }),
@@ -145,7 +149,6 @@ function verdict(rep, ctx) {
           : 'A difference is not always a mistake: the fees you charge on top are not written line by line. Write your estimate above and it will be taken off.',
     }),
     rows,
-    debtBlock(ctx.date, sumOf(rep.real)),
     exact && WALLETS.some((w) => Math.abs(rep.gap[w]) > 0.005)
       ? el('p.note', { text: 'The total is right but the networks do not match one by one — some lines were probably written on the wrong network.' })
       : null,

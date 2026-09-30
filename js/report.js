@@ -18,7 +18,8 @@ const RED = [0.75, 0.22, 0.17];
 
 const M = 54;                       // a wide margin: the page should feel empty
 const LINE = 20;                    // one written line, with room to breathe
-const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'airtime', bundle: 'bundle' };
+/* written short, the way it is written by hand */
+const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'a', bundle: 'b' };
 
 /* Whole cedis unless there are pesewas — the book writes round numbers. */
 const amt = (v) => money(v, { dp: Number.isInteger(Number(v)) ? 0 : 2 });

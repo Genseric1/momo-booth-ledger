@@ -10,7 +10,7 @@ import * as store from '../store.js';
 import * as sync from '../sync.js';
 import { editLine } from './editline.js';
 
-const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'air', bundle: 'bdl' };
+const DIR = { cash_in: 'in', cash_out: 'out', airtime: 'a', bundle: 'b' };
 const CLS = { cash_in: 'in', cash_out: 'out', airtime: 'other', bundle: 'other' };
 
 export function reportFor(date) {
