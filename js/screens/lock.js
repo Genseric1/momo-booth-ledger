@@ -38,7 +38,9 @@ async function accountDoor(root, resolve) {
   if (!needsAccount()) return opened(resolve);
   if (!sync.hasSession()) return renderSignIn(root, resolve);
   const check = await sync.ensureMembership();
-  return check.ok ? opened(resolve) : renderSignIn(root, resolve, sync.notOnTheList(check));
+  if (check.ok) return opened(resolve);
+  return renderSignIn(root, resolve,
+    check.expired ? 'Your session has ended. Sign in again.' : sync.notOnTheList(check));
 }
 
 /* ── the account ── */

@@ -91,6 +91,8 @@ export async function ensureMembership() {
   if (!navigator.onLine) return { ok: true };
   const answer = await loadRole();
   if (answer.role) return { ok: true };
+  /* a dead token is not a hiccup: the session has to be started again */
+  if (answer.dead) { await sessionDied(); return { ok: false, expired: true }; }
   /* the server never said no — it said nothing. Nobody is signed out over a
      network hiccup or a token that simply needed renewing. */
   if (!answer.asked) return { ok: true };
@@ -119,9 +121,10 @@ async function loadRole() {
       emit();
       return { asked: true, role: status.role };
     } catch (e) {
+      if (!String(e.message).startsWith('401')) return { asked: false };
       /* an expired token reads as a refusal; renew it once and ask again */
-      if (attempt === 1 && String(e.message).startsWith('401') && await refresh()) continue;
-      return { asked: false };
+      if (attempt === 1 && await refresh()) continue;
+      return { asked: false, dead: true };
     }
   }
   return { asked: false };
@@ -238,6 +241,15 @@ export async function signOut() {
   await DB.setMeta('owner', false);
   status.signedIn = false; status.email = null; status.role = null; status.owner = false; emit();
 }
+/* The server answered, and answered that this token is no good — after a
+   renewal was tried and refused. That is not a hiccup: the session is dead,
+   and pretending otherwise leaves the queue stuck for ever. */
+async function sessionDied() {
+  await signOut();
+  status.lastError = 'Your session has ended. Sign in again.';
+  emit();
+}
+
 /* true when the token is gone or about to be */
 function expiringSoon() {
   if (!session?.expires_at) return false;
@@ -316,8 +328,10 @@ async function doSync() {
       if (!canWrite()) { pulled += await pullStore(s); continue; }   // a viewer only reads
       try { pushed += await pushStore(s); }
       catch (e) {
-        if (String(e.message).startsWith('401') && await refresh()) pushed += await pushStore(s);
-        else throw e;
+        if (!String(e.message).startsWith('401')) throw e;
+        if (await refresh()) { pushed += await pushStore(s); continue; }
+        await sessionDied();
+        throw new Error('Your session has ended. Sign in again.');
       }
       pulled += await pullStore(s);
     }
