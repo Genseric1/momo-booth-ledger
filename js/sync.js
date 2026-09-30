@@ -9,7 +9,7 @@
 
 import * as DB from './db.js';
 import { STORE_NAMES } from './db.js';
-import { state, reload } from './store.js';
+import { state, reload, saveSettings } from './store.js';
 import { hasBackend } from './config.js';
 
 export const status = { configured: false, online: navigator.onLine, signedIn: false,
@@ -176,6 +176,33 @@ export async function changePassword(password) {
   return user;
 }
 
+/* What the booth decided once, for every device: the password put on exported
+   registers. Read on each sync, written only by a manager (the database says
+   so, not the app). */
+export async function pullBoothSettings() {
+  const booth = state.settings?.boothId;
+  if (!booth || !session?.access_token) return;
+  try {
+    const rows = await rest(`/rest/v1/booths?select=export_password&id=eq.${booth}`);
+    const value = rows?.[0]?.export_password;
+    if (value != null && value !== state.settings.exportPassword) {
+      await saveSettings({ exportPassword: value });
+    }
+  } catch { /* keep what this device already knows */ }
+}
+
+export async function pushExportPassword(value) {
+  const booth = state.settings?.boothId;
+  await saveSettings({ exportPassword: value });
+  if (!booth || !session?.access_token) return { shared: false };
+  await rest(`/rest/v1/booths?id=eq.${booth}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ export_password: value }),
+  });
+  return { shared: true };
+}
+
 export function googleSignIn() {
   const { url } = cfg();
   const back = location.origin + location.pathname;
@@ -283,6 +310,7 @@ async function doSync() {
       }
       pulled += await pullStore(s);
     }
+    await pullBoothSettings();
     status.lastSync = new Date().toISOString();
     await DB.setMeta('lastSync', status.lastSync);
     if (pulled) await reload();

@@ -14,10 +14,13 @@
 create extension if not exists "pgcrypto";
 
 create table if not exists booths (
-  id          uuid primary key default gen_random_uuid(),
-  name        text not null,
-  created_at  timestamptz not null default now()
+  id               uuid primary key default gen_random_uuid(),
+  name             text not null,
+  -- put on every register exported from any device of the booth
+  export_password  text not null default '',
+  created_at       timestamptz not null default now()
 );
+alter table booths add column if not exists export_password text not null default '';
 
 create table if not exists booth_members (
   booth_id  uuid not null references booths(id) on delete cascade,
@@ -168,6 +171,11 @@ alter table commission_versions   enable row level security;
 
 drop policy if exists booths_read on booths;
 create policy booths_read on booths for select using (is_booth_member(id));
+
+-- only a manager changes what the booth decides, such as the export password
+drop policy if exists booths_update on booths;
+create policy booths_update on booths for update
+  using (booth_role(id) = 'manager') with check (booth_role(id) = 'manager');
 
 drop policy if exists members_read on booth_members;
 create policy members_read on booth_members for select using (user_id = auth.uid() or is_booth_member(booth_id));

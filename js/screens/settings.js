@@ -103,8 +103,16 @@ export function settingsScreen(ctx) {
         el('div.field',
           el('label', { text: 'Password put on every export' }),
           el('input', { type: 'text', value: s.exportPassword || '', placeholder: 'none — registers open freely',
-            onchange: (e) => store.saveSettings({ exportPassword: e.target.value.trim() }).then(ctx.refresh) })),
-        el('p.note', { text: 'Set once, and every register that leaves this device carries it. Leave it empty and they open freely.' }),
+            onchange: async (e) => {
+              try {
+                const r = await sync.pushExportPassword(e.target.value.trim());
+                toast(r.shared ? 'Saved for the whole booth' : 'Saved on this device');
+              } catch (err) {
+                toast(/403|401/.test(err.message) ? 'Only a manager can change it' : err.message, { error: true });
+              }
+              ctx.refresh();
+            } })),
+        el('p.note', { text: 'Set once, and every register exported from any device of the booth carries it. Leave it empty and they open freely.' }),
         el('p.note', { text: 'It is the PDF format’s own lock: a speed bump, not a safe. And whoever receives a register needs this password to read it — give it to them by another route than the file itself.' }),
       ]),
 
