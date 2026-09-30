@@ -9,7 +9,7 @@
 /* Bumped on every publish, and shown in Settings so the screen says which
    version it is actually running — the service worker caches under the same
    name, and a test keeps the two from drifting apart. */
-export const VERSION = 'v36';
+export const VERSION = 'v37';
 
 export const CONFIG = {
   /* From the Supabase dashboard: Project settings -> API */

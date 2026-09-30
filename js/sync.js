@@ -14,7 +14,7 @@ import { hasBackend } from './config.js';
 
 export const status = { configured: false, online: navigator.onLine, signedIn: false,
   busy: false, lastSync: null, lastError: null, pendingCount: 0, email: null, role: null,
-  owner: false };
+  owner: false, pulledAt: null };
 
 export const hasSession = () => !!session?.access_token;
 export const currentEmail = () => session?.user?.email || null;
@@ -320,6 +320,29 @@ async function pullStore(store) {
   return added;
 }
 
+/* Five stores syncing side by side must not each try to renew the same token:
+   the first renewal is the one everybody waits on. */
+let renewing = null;
+function refreshOnce() {
+  renewing ||= refresh().finally(() => { renewing = null; });
+  return renewing;
+}
+
+async function syncStore(store) {
+  if (!canWrite()) return { pushed: 0, pulled: await pullStore(store) };   // a viewer only reads
+  let pushed = 0;
+  try { pushed = await pushStore(store); }
+  catch (e) {
+    if (!String(e.message).startsWith('401')) throw e;
+    if (!await refreshOnce()) {
+      await sessionDied();
+      throw new Error('Your session has ended. Sign in again.');
+    }
+    pushed = await pushStore(store);
+  }
+  return { pushed, pulled: await pullStore(store) };
+}
+
 let running = null;
 export function sync() {
   if (running) return running;
@@ -338,21 +361,17 @@ async function doSync() {
   try {
     if (!status.role) await loadRole();
     if (expiringSoon()) await refresh();
-    for (const s of STORE_NAMES) {
-      if (!canWrite()) { pulled += await pullStore(s); continue; }   // a viewer only reads
-      try { pushed += await pushStore(s); }
-      catch (e) {
-        if (!String(e.message).startsWith('401')) throw e;
-        if (await refresh()) { pushed += await pushStore(s); continue; }
-        await sessionDied();
-        throw new Error('Your session has ended. Sign in again.');
-      }
-      pulled += await pullStore(s);
-    }
+    /* The five stores have nothing to say to each other, so they went one
+       after the other for no reason: ten questions to the server in single
+       file, each waiting out the whole trip to Ghana and back. Asked together,
+       a sync costs one trip instead of ten. */
+    const done = await Promise.all(STORE_NAMES.map(syncStore));
+    for (const r of done) { pushed += r.pushed; pulled += r.pulled; }
     await pullBoothSettings();
     status.lastSync = new Date().toISOString();
     await DB.setMeta('lastSync', status.lastSync);
-    if (pulled) await reload();
+    /* the screen is watching this: it redraws when it changes */
+    if (pulled) { await reload(); status.pulledAt = Date.now(); }
   } catch (e) {
     status.lastError = e.message;
   } finally {

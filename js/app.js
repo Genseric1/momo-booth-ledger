@@ -66,7 +66,7 @@ function bar(onPage) {
     onPage
       ? el('button.datebtn', { title: 'pick a day', onclick: () => openCalendar(ctx) },
           el('div.date', { text: dayLabel(ctx.date) }),
-          el('div.state', { text: sync.isViewer() ? 'read only' : isToday ? clockLabel() : 'another day' }))
+          el('div.state', { text: idleLabel() }))
       : el('div', el('div.date', { text: TITLE[ctx.view] })),
     el('div.sp'),
     onPage ? el('button', { text: '‹', title: 'day before', onclick: () => ctx.setDate(addDays(ctx.date, -1)) }) : null,
@@ -78,32 +78,85 @@ function bar(onPage) {
 
 const clockLabel = () => `today · ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
 
+/* Nothing may be redrawn from under a hand that is writing: the cursor would
+   jump out of the field and a half-typed number would be lost. */
+let wantRedraw = false;
+const busyTyping = () => {
+  const tag = document.activeElement?.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || !!document.querySelector('.sheet-bg');
+};
+function freshen() {
+  if (busyTyping()) { wantRedraw = true; return; }
+  wantRedraw = false;
+  render();
+}
+
+const idleLabel = () => sync.isViewer() ? 'read only'
+  : ctx.date === today() ? clockLabel() : 'another day';
+
+/* The line under the date. It said "sending…" and then never said anything
+   else: with nothing left to send no branch matched, so the word stayed there
+   for ever and the sync looked stuck although it had finished. It now always
+   ends by saying the ordinary thing again — and it only says "sending…" when
+   there is really something of yours on its way, not on every routine look. */
 function paintSync() {
   const s = sync.status;
   const state = root.querySelector('.bar .state');
   if (!state || ctx.view !== 'page') return;
   if (!s.configured) return;                       // no backend: nothing to say
-  if (!s.online) state.textContent = `offline · ${s.pendingCount} kept here`;
-  else if (s.busy) state.textContent = 'sending…';
-  else if (s.pendingCount) state.textContent = `${s.pendingCount} to send`;
+  state.textContent = !s.online ? `offline · ${s.pendingCount} kept here`
+    : s.busy && s.pendingCount ? 'sending…'
+    : s.pendingCount ? `${s.pendingCount} to send`
+    : idleLabel();
+}
+
+/* The app is kept on the device so it opens with no network, which means a new
+   version does not arrive just because one was published: the browser has to be
+   told to go and look. It looked only when the address was typed again — so a
+   browser where the app simply stays open could sit on an old copy for days.
+   It now looks every time the app comes back to the front, and reloads itself
+   once the new copy has taken over. */
+function watchForNewVersion() {
+  const sw = navigator.serviceWorker;
+  if (!sw) return;
+  const hadOne = !!sw.controller;          // false on the very first visit
+  let reloading = false;
+
+  sw.register('sw.js').then((reg) => {
+    const look = () => { if (!document.hidden) reg.update().catch(() => {}); };
+    document.addEventListener('visibilitychange', look);
+    setInterval(look, 1800000);
+  }).catch(() => {});
+
+  sw.addEventListener('controllerchange', () => {
+    if (!hadOne || reloading) return;      // first install: nothing to replace
+    reloading = true;
+    const whenFree = () => (busyTyping() ? setTimeout(whenFree, 4000) : location.reload());
+    whenFree();                            // never mid-line
+  });
 }
 
 async function boot() {
   /* In a sandboxed frame the getter itself can throw, so this stays guarded. */
-  try { navigator.serviceWorker?.register('sw.js').catch(() => {}); } catch { /* no offline cache here */ }
+  try { watchForNewVersion(); } catch { /* no offline cache here */ }
   await store.init();
   await sync.init();                 // loads the cached session — works offline
   await lockScreen(root);
   store.onSyncNeeded(sync.sync);
+  let seenPull = sync.status.pulledAt;
   sync.subscribe(() => {
     paintSync();
-    /* Settings shows the state of the sync, so it has to follow it — but never
-       while a field is being typed into, or the cursor would jump out. */
-    if (ctx.view !== 'settings') return;
-    const tag = document.activeElement?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || document.querySelector('.sheet-bg')) return;
-    render();
+    /* Lines written on another device used to land in the database and stop
+       there: the screen was never told, so they only appeared if you thought
+       to reload the page. A sync that brought something now redraws. */
+    if (sync.status.pulledAt !== seenPull) { seenPull = sync.status.pulledAt; wantRedraw = true; }
+    /* Settings shows the state of the sync, so it has to follow it. */
+    if (ctx.view === 'settings') { if (!busyTyping()) render(); return; }
+    if (wantRedraw) freshen();
   });
+  /* a redraw held back while a line was being written goes through as soon as
+     the hand leaves the field */
+  addEventListener('focusout', () => { if (wantRedraw) setTimeout(freshen, 0); });
   sync.startAutoSync();
   render();
   sync.sync();
