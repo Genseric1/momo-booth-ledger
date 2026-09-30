@@ -74,6 +74,22 @@ async function rest(path, opts = {}) {
 /* The role comes from the booth's own membership table. */
 export const refreshRole = () => loadRole();
 
+/* Signing in is not the same as being let in: the account must be on the
+   booth's list. Offline, the remembered role is trusted, so a lost network
+   never locks an agent out of his own page. */
+export async function ensureMembership() {
+  if (status.role) return { ok: true };
+  if (!navigator.onLine) return { ok: true };
+  if (await loadRole()) return { ok: true };
+  const who = session?.user || null;
+  await signOut();
+  return { ok: false, email: who?.email || null, id: who?.id || null };
+}
+
+export const notOnTheList = (who) => "That account is not on this booth's list yet."
+  + (who?.email ? ` Give the manager this: ${who.email}` : '')
+  + (who?.id ? ` (id ${who.id})` : '');
+
 async function loadRole() {
   const booth = state.settings?.boothId;
   const uid = session?.user?.id;

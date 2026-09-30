@@ -35,22 +35,8 @@ export function lockScreen(root) {
   });
 }
 
-/* Turned away, but with everything the manager needs to let him in. */
-const notOnTheList = (who) => `That account is not on this booth's list yet.`
-  + (who?.email ? ` Give the manager this: ${who.email}` : '')
-  + (who?.id ? ` (id ${who.id})` : '');
-
-/* A signed-in device checks, when it can, that the account still belongs to the
-   booth. Offline it trusts the role it remembers, so the network never locks
-   an agent out of his own page. */
-async function guardMembership() {
-  if (sync.status.role) return { ok: true };
-  if (!navigator.onLine) return { ok: true };
-  if (await sync.refreshRole()) return { ok: true };
-  const who = sync.currentUser();
-  await sync.signOut();
-  return { ok: false, email: who?.email || null, id: who?.id || null };
-}
+const guardMembership = () => sync.ensureMembership();
+const notOnTheList = (who) => sync.notOnTheList(who);
 
 function renderSignIn(root, next, firstError = null) {
   let email = '', password = '', busy = false;

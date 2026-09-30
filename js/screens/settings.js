@@ -148,9 +148,11 @@ function signInSheet(ctx) {
       el('input', { type: 'password', oninput: (e) => { password = e.target.value; } })),
     el('button.big', { text: 'Sign in', onclick: async () => {
       try { await sync.signIn(email, password); } catch (e) { return toast(e.message, { error: true }); }
+      const check = await sync.ensureMembership();
+      if (!check.ok) { ctx.refresh(); return toast(sync.notOnTheList(check), { error: true, ms: 12000 }); }
       toast('Signed in'); close(); ctx.refresh(); sync.sync();
     } }),
-    el('p.note', { style: { marginTop: '10px' }, text: 'The manager creates the accounts in the Supabase dashboard and adds them to this booth.' }),
+    el('p.note', { style: { marginTop: '10px' }, text: 'The manager creates the accounts and puts them on the booth’s list.' }),
   ]);
 }
 

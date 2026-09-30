@@ -8,16 +8,16 @@
 
 export const CONFIG = {
   /* From the Supabase dashboard: Project settings -> API */
-  supabaseUrl: '',
-  supabaseKey: '',            // the *anon* key — never the service_role key
+  supabaseUrl: 'https://mzslslabhwbonpklpzcv.supabase.co',
+  supabaseKey: 'sb_publishable_VfCxXn_mawojpkdcY9D6FA_NCSc1HCz',   // publishable — never the secret one
 
   /* The id of the row created in `booths` (see supabase/schema.sql) */
-  boothId: '',
+  boothId: '0403c685-eb17-4c5c-abd2-ed3b165198f7',
 
   /* true  = the page asks for an account before it opens.
      false = anyone who has the link can use the app on their own device.
      It only takes effect once the three fields above are filled in.          */
-  requireAccount: true,
+  requireAccount: false,   // turn on once the accounts exist, or nobody gets in
 
   /* Offer "Continue with Google", so the manager signs in with his own gmail
      address and keeps his password with Google. Turn the provider on in
