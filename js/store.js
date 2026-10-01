@@ -112,13 +112,29 @@ export async function reload() {
 }
 
 /* ── shared stamp on every version ── */
-function stamp(extra = {}) {
+/* A version's identity is minted here and is never inherited.
+
+   It used to be spread first and the caller's fields last — so a mutation
+   written as `stamp({ ...currentRow, deleted: true })` quietly carried the old
+   row's `vid` and `rev` through. The result was not a new version at all: it
+   had the same key, so it overwrote its own predecessor in the device, and the
+   server — which ignores a vid it already holds — threw it away without a
+   word. Deleting a debt therefore worked on the device that did it and nowhere
+   else, for ever. Lines were safe only because they happened to be rebuilt
+   field by field.
+
+   `server_at` is the server's own record of when a row reached it, and
+   `pending` and `cipher_number` belong to the device. None of them may travel
+   on a new version: a re-sent `server_at` would land the row beneath the other
+   devices' cursors, where nobody would ever read it. */
+export function stamp(extra = {}) {
+  const { vid, rev, server_at, pending, cipher_number, ...fields } = extra;
   return {
+    ...fields,
     vid: uuid(),
     rev: new Date().toISOString(),
-    booth_id: state.settings.boothId || 'local',
-    device: state.settings.device,
-    ...extra,
+    booth_id: state.settings?.boothId || 'local',
+    device: state.settings?.device,
   };
 }
 let syncHook = null;

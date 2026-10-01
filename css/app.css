@@ -90,6 +90,7 @@ input,select,textarea { font:inherit; color:inherit; }
 .remind span { flex:1; }
 .remind b { font-weight:800; text-decoration:underline; white-space:nowrap; }
 .remind.evening { background:#EFF4FC; color:#1C3C77; }
+.remind.shut { background:#F2F0EC; color:#55524C; }
 
 /* ── the pen: one line, the phone's own keyboard ── */
 .writer { position:sticky; bottom:0; z-index:25; background:var(--paper2);

@@ -6,7 +6,7 @@ import { today, dayLabel, addDays } from './util.js';
 import * as store from './store.js';
 import * as sync from './sync.js';
 import { lockScreen } from './screens/lock.js';
-import { pageScreen } from './screens/page.js';
+import { pageScreen, reportFor } from './screens/page.js';
 import { writerBar, emptyDraft } from './screens/writer.js';
 import { morningScreen, eveningScreen } from './screens/counts.js';
 import { menuScreen } from './screens/menu.js';
@@ -50,7 +50,8 @@ function render({ focus = false } = {}) {
   const onPage = ctx.view === 'page';
   clear(root);
   root.append(bar(onPage), SCREENS[ctx.view](ctx));
-  if (onPage && sync.canWrite()) {
+  /* the pen leaves the page when the day has been counted and closed */
+  if (onPage && sync.canWrite() && !reportFor(ctx.date).closed) {
     const pen = writerBar(ctx);
     root.append(pen);
     scrollTo({ top: document.body.scrollHeight });

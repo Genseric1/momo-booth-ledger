@@ -45,7 +45,18 @@ export function pageScreen(ctx) {
 
 /* One line, only while something is still owed to the day. */
 function reminder(rep, ctx) {
-  if (!sync.canWrite() || rep.closed) return null;
+  if (!sync.canWrite()) return null;
+
+  /* A day that has been counted and closed must not quietly take another line.
+     The pen used to stay there on a closed day, so a line written by mistake
+     landed in a day whose count was already settled — and the count stopped
+     matching with nothing on the page to say why. */
+  if (rep.closed) {
+    return el('button.remind.shut', { onclick: () => ctx.go('evening') },
+      el('span', { text: 'This day is counted and closed' }),
+      el('b', { text: sync.canReopenDay() ? 'reopen it' : 'ask the manager' }));
+  }
+
   const isToday = ctx.date === today();
 
   if (!rep.hasOpening) {

@@ -284,7 +284,10 @@ async function refresh() {
 }
 
 /* ── push / pull ── */
-const STRIP = ['pending', 'cipher_number'];     // local helpers, not columns
+/* `pending` and `cipher_number` belong to the device; `server_at` belongs to
+   the server, and a row sent back up carrying an old one would be filed behind
+   every other device's cursor, where it would never be read again. */
+const STRIP = ['pending', 'cipher_number', 'server_at'];
 /* Lines written before the booth was configured carry booth_id 'local'. They
    are stamped with the real booth on their way up, so a day of work written
    before the account existed is not stranded on the device. */

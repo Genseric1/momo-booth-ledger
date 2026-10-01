@@ -161,3 +161,30 @@ test('a debt whose name has not arrived yet still counts, and still shows', asyn
   assert.equal(onScreen, rep.realCapital, 'the total on the screen is the real capital');
   assert.equal(onScreen, 272823);
 });
+
+/* The bug that made a deleted debt come back on every other device: a mutation
+   written as stamp({ ...currentRow, deleted: true }) inherited the old row's
+   vid, so it was not a new version at all. The device overwrote its own
+   predecessor; the server, which ignores a vid it already holds, dropped it in
+   silence. Lines were spared only because they are rebuilt field by field. */
+test('a corrected row is a new version, not the old one written over', async () => {
+  const { stamp, project } = await import('../js/store.js');
+
+  const original = {
+    vid: 'c0ffee00-0000-4000-8000-000000000001', rev: '2020-01-01T10:00:00.000Z',
+    entry_id: 'e1', account_id: 'a1', amount: 500, deleted: false,
+    server_at: '2020-01-01T10:00:01Z', pending: 0,
+  };
+  const next = stamp({ ...original, deleted: true });
+
+  assert.notEqual(next.vid, original.vid, 'a new version gets its own vid');
+  assert.ok(next.rev > original.rev, 'and its own rev, or it would not win');
+  assert.equal(next.server_at, undefined, 'the server stamps its own arrival time');
+  assert.equal(next.pending, undefined, 'pending belongs to the device');
+  assert.equal(next.deleted, true, 'the change itself is carried');
+  assert.equal(next.account_id, 'a1', 'and so is everything not touched');
+
+  const now = project([original, next], 'entry_id').get('e1');
+  assert.equal(now.deleted, true, 'what the booth sees is the deletion');
+  assert.equal(now.vid, next.vid);
+});
