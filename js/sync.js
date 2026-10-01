@@ -52,6 +52,7 @@ export async function init() {
   status.configured = !!(url && key);
   status.signedIn = !!session?.access_token;
   status.email = session?.user?.email || null;
+  await recoverOnce();
   status.role = await DB.getMeta('role', null);        // remembered, so it holds offline
   status.owner = await DB.getMeta('owner', false);
   status.pendingCount = await countPending();
@@ -313,14 +314,40 @@ async function pushStore(store) {
   return rows.length;
 }
 
+/* The cursor is kept a couple of seconds behind what was just read.
+
+   Two rows can reach the server in the same instant — a batch of lines sent
+   together does exactly that — and asking for everything strictly *after* a
+   moment splits them: whichever falls on the wrong side of the cursor is never
+   read by this device again. It is on the server, it is on the device that
+   wrote it, and it is invisible here for ever, with no error anywhere and two
+   inventories that look identical.
+
+   Re-reading a handful of rows costs nothing: merging ignores a vid it already
+   holds. This buys back the only way a line could be lost in silence. */
+const OVERLAP = 2000;
+export const nextCursor = (serverAt) =>
+  new Date(new Date(serverAt).getTime() - OVERLAP).toISOString();
+
 async function pullStore(store) {
   const cursorKey = `cursor:${store}`;
   const since = await DB.getMeta(cursorKey, '1970-01-01T00:00:00Z');
   const rows = await rest(`/rest/v1/${store}?select=*&server_at=gt.${encodeURIComponent(since)}&order=server_at.asc&limit=1000`);
   if (!rows?.length) return 0;
   const added = await DB.mergeRemote(store, rows.map(clean));
-  await DB.setMeta(cursorKey, rows[rows.length - 1].server_at);
+  await DB.setMeta(cursorKey, nextCursor(rows[rows.length - 1].server_at));
   return added;
+}
+
+/* Whatever was already lost that way is still on the server, behind a cursor
+   that has passed it. So every device reads the booth once from the beginning:
+   the rows it already holds are ignored, and anything that fell through comes
+   back on its own. A booth holds a few hundred rows — it costs one sync. */
+const REREAD = 'reread:v42';
+async function recoverOnce() {
+  if (await DB.getMeta(REREAD, false)) return;
+  for (const s of STORE_NAMES) await DB.setMeta(`cursor:${s}`, '1970-01-01T00:00:00Z');
+  await DB.setMeta(REREAD, true);
 }
 
 /* Five stores syncing side by side must not each try to renew the same token:

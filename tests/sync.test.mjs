@@ -188,3 +188,33 @@ test('a corrected row is a new version, not the old one written over', async () 
   assert.equal(now.deleted, true, 'what the booth sees is the deletion');
   assert.equal(now.vid, next.vid);
 });
+
+/* Two devices, identical inventories, different contents. The only way: a row
+   that reached the server in the same instant as another, split by a cursor
+   that asks for everything strictly after a moment. Whichever fell on the
+   wrong side was never read by that device again. */
+test('two rows arriving in the same instant are both read', async () => {
+  const { nextCursor } = await import('../js/sync.js');
+
+  const tied = '2026-10-01T11:06:19.123Z';
+  const server = [
+    { vid: 'a', server_at: '2026-10-01T11:06:18.000Z' },
+    { vid: 'b', server_at: tied },
+    { vid: 'c', server_at: tied },          // same instant as b
+  ];
+  const pull = (since) => server.filter((r) => r.server_at > since);
+
+  /* the old rule: the cursor lands exactly on the tie */
+  let cursor = '1970-01-01T00:00:00Z';
+  let page = pull(cursor).slice(0, 2);                 // a page that ends on b
+  cursor = page[page.length - 1].server_at;            // = tied
+  assert.equal(pull(cursor).length, 0, 'c is behind the cursor and gone for ever');
+
+  /* the rule now: the cursor stays a little behind what was read */
+  cursor = '1970-01-01T00:00:00Z';
+  page = pull(cursor).slice(0, 2);
+  cursor = nextCursor(page[page.length - 1].server_at);
+  const rest = pull(cursor);
+  assert.ok(rest.some((r) => r.vid === 'c'), 'c comes back');
+  assert.ok(rest.some((r) => r.vid === 'b'), 'b is read again, which merging ignores');
+});
