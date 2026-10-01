@@ -9,6 +9,7 @@ import { openBalances } from '../calc.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import { reportFor } from './page.js';
+import { entrySheet, personSheet } from './debts.js';
 
 /* Who still owes, and who is still owed, as things stand on that day. A debt is
    part of the capital, so this is where it belongs — beside the wallets that
@@ -22,7 +23,8 @@ const owing = (upToDay) =>
    disagree with the lines above it. */
 const sumOf = (o) => WALLETS.reduce((t, w) => t + (Number(o?.[w]) || 0), 0);
 
-function countSheet(vals, upToDay, { hint = null } = {}) {
+function countSheet(vals, upToDay, { hint = null, ctx = null } = {}) {
+  const open = ctx && sync.canWrite() ? (p) => () => personSheet(ctx, p) : () => null;
   const people = owing(upToDay);
   const debts = people.reduce((t, p) => t + p.net, 0);
   const total = el('div.v.num');
@@ -37,10 +39,27 @@ function countSheet(vals, upToDay, { hint = null } = {}) {
   retotal();
   return el('div.countsheet',
     ...rows,
-    ...people.map((p) => el('div.countrow.owed',
+    /* A name here is the debt itself: tapping it is how it is paid back,
+       corrected or put together with the same person spelled another way. */
+    ...people.map((p) => el(`${open(p) ? 'button' : 'div'}.countrow.owed`, { onclick: open(p) },
       el('label', { text: p.name }, el('small', { text: p.net > 0 ? 'owes us' : 'we owe' })),
       el(`div.v.num.${p.net > 0 ? 'pos' : 'neg'}`, { text: money(p.net, { sign: p.net < 0, dp: 0 }) }))),
     el('div.countrow.total', el('label', { text: 'TOTAL' }), total));
+}
+
+/* The two buttons that write a debt. They sit under the count because that is
+   where a debt is a figure in the capital rather than a line at the counter:
+   written here, beside the wallets it moves. */
+function debtButtons(ctx, { carried = false } = {}) {
+  if (!sync.canWrite()) return null;
+  return el('div', { style: { marginTop: '16px' } },
+    el('button.big.quiet', { text: 'Someone owes us', onclick: () => entrySheet(ctx, 'owed_to_us') }),
+    el('button.big.quiet', { text: 'We owe someone', style: { marginTop: '8px' },
+      onclick: () => entrySheet(ctx, 'we_owe') }),
+    carried
+      ? el('p.note', { style: { marginTop: '10px' }, text:
+          'The names above are what was still standing last night — that is what the booth opened with. A debt written now belongs to today, so it appears in tonight’s count, not in this one.' })
+      : null);
 }
 
 /* A read-only account sees the figures as text, not as fields to fill. */
@@ -67,7 +86,7 @@ export function morningScreen(ctx) {
      difference was money lent out after that morning count was taken. The
      button right below says yesterday's figure, and the total under it
      disagreed with it on the same screen. */
-  const sheet = countSheet(vals, addDays(ctx.date, -1));
+  const sheet = countSheet(vals, addDays(ctx.date, -1), { ctx });
   if (!sync.canWrite()) readOnly(sheet);
 
   return el('div.sheetview',
@@ -87,8 +106,10 @@ export function morningScreen(ctx) {
       },
     }) : null,
     sheet,
+    debtButtons(ctx, { carried: true }),
     !sync.canWrite() ? null : el('button.big', {
       text: 'Save the morning count',
+      style: { marginTop: '18px' },
       onclick: async () => { await store.setOpening(ctx.date, vals, ctx.agent); toast('Morning saved'); ctx.go('page'); },
     }));
 }
@@ -101,7 +122,7 @@ export function eveningScreen(ctx) {
 
   const render = () => {
     const sheet = countSheet(vals, ctx.date, {
-      hint: (w) => `the page says ${money(rep.expected[w], { dp: 0 })}`,
+      ctx, hint: (w) => `the page says ${money(rep.expected[w], { dp: 0 })}`,
     });
     if (!sync.canWrite()) readOnly(sheet);
 
@@ -109,6 +130,7 @@ export function eveningScreen(ctx) {
       el('h2', { text: `Evening — ${dayLabel(ctx.date, { weekday: false })}` }),
       el('p.lead', { text: 'Count for real. This is the number that matters.' }),
       sheet,
+      debtButtons(ctx),
       !sync.canWrite() ? null : el('div.field',
         el('label', { text: 'Extra fees you collected today (if you know)' }),
         amountInput({ value: extras, placeholder: 'optional', oninput: (v) => { extras = v; } }),

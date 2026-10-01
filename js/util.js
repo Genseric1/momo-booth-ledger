@@ -135,3 +135,22 @@ export const groupBy = (arr, f) => {
   for (const x of arr) { const k = f(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); }
   return m;
 };
+
+/* ── names of people the booth lends to ──────────────────────────────────
+   "Séphora", "Sephora" and "SEPHORA" are one person: a fold strips what varies
+   between the way a name is said and the way it is typed, and the booth never
+   ends up with two of them. */
+export const foldName = (s) => String(s || '').normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/* "Modest" and "Modeste" do not fold the same, and nothing can know on its own
+   that they are the same person — a booth may really have both. So this only
+   says "these two are close enough to be worth asking about", and the asking
+   is left to whoever knows the people. */
+export function looksLike(a, b) {
+  const x = foldName(a), y = foldName(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x];
+  return long.length - short.length <= 2 && long.startsWith(short);
+}

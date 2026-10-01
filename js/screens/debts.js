@@ -4,7 +4,7 @@
    kinds of entry to choose from.                                             */
 
 import { el, fill, sheet, toast, amountInput, confirmSheet } from '../ui.js';
-import { WALLETS, WALLET_LABEL, money, today } from '../util.js';
+import { WALLETS, WALLET_LABEL, money, today, foldName, looksLike } from '../util.js';
 import { openBalances } from '../calc.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
@@ -49,21 +49,26 @@ export function debtsScreen(ctx) {
 
 /* Adding: a name, an amount, and what it came out of. */
 function addSheet(ctx, direction) {
-  const st = { name: '', amount: '', wallet: 'CASH' };
+  const st = { name: '', amount: '', wallet: 'CASH', fresh: !store.state.debtAccounts.length };
   const known = store.state.debtAccounts;
   sheet(direction === 'owed_to_us' ? 'Someone owes us' : 'We owe someone', ({ body, close }) => {
     const note = el('p.note');
     const sayEffect = () => { note.textContent = effect(direction, st); };
     const render = () => fill(body,
+      /* The people the booth already knows come first, and writing a name is
+         the deliberate second step. A name typed from memory is how one
+         person became two. */
       el('div.field',
         el('label', { text: 'Who' }),
-        el('input', { value: st.name, placeholder: 'name', autocomplete: 'off',
-          oninput: (e) => { st.name = e.target.value; } }),
-        known.length ? el('div.pick', { style: { marginTop: '8px' } }, known.slice(0, 6).map((a) =>
-          el('button', { text: a.name, onclick: (e) => {
-            st.name = a.name;
-            e.target.closest('.field').querySelector('input').value = a.name;
-          } }))) : null),
+        known.length ? el('div.pick', known.map((a) =>
+          el(`button${foldName(st.name) === foldName(a.name) ? '.on' : ''}`, {
+            text: a.name, onclick: () => { st.name = a.name; st.fresh = false; render(); },
+          }))) : null,
+        st.fresh
+          ? el('input', { value: st.name, placeholder: 'name', autocomplete: 'off',
+              style: { marginTop: '8px' }, oninput: (e) => { st.name = e.target.value; } })
+          : el('button.big.quiet', { text: 'Someone new', style: { marginTop: '8px' },
+              onclick: () => { st.fresh = true; st.name = ''; render(); } })),
       el('div.field', el('label', { text: 'How much' }),
         amountInput({ value: st.amount, oninput: (v) => { st.amount = v; sayEffect(); } })),
       el('div.field',
@@ -88,8 +93,32 @@ function addSheet(ctx, direction) {
 }
 
 /* Settling: the amount comes back, and when nothing is left the line goes. */
+/* Everyone the booth knows except the one being looked at — the names it could
+   be merged into. Archived ones are already gone from this list. */
+const othersThan = (id) => store.state.debtAccounts.filter((a) => a.account_id !== id);
+
+function mergeSheet(ctx, person, closeParent) {
+  const candidates = othersThan(person.account_id);
+  sheet(`${person.name} is…`, ({ body, close }) => {
+    fill(body,
+      el('p.lead', { text: `Every entry written under ${person.name} moves onto the person you pick. Nothing is lost — the two debts become one.` }),
+      el('div.rows', candidates.map((a) => el('button.r', {
+        onclick: async () => {
+          if (!await confirmSheet('Put them together',
+            `${person.name} and ${a.name} are the same person. Everything written under ${person.name} moves onto ${a.name}.`,
+            { okLabel: `Yes, one person` })) return;
+          await store.mergeDebtAccounts(person.account_id, a.account_id);
+          toast(`${person.name} and ${a.name} are one`);
+          close(); closeParent(); ctx.refresh();
+        },
+      }, el('div', { text: a.name }), el('div.sp'), el('div.go', { text: '›' })))));
+    return [];
+  });
+}
+
 function settleSheet(ctx, person) {
   const owed = person.net > 0;
+  const others = () => othersThan(person.account_id);
   const st = { amount: String(Math.abs(person.net)), wallet: 'CASH' };
   sheet(person.name, ({ body, close }) => {
     const render = () => fill(body,
@@ -112,6 +141,10 @@ function settleSheet(ctx, person) {
         toast(value >= Math.abs(person.net) - 0.004 ? 'Settled' : 'Part paid back');
         close(); ctx.refresh();
       } }),
+      /* Two spellings, one person: the halves are put back together rather
+         than one of them deleted, so nothing of what was lent is lost. */
+      others().length ? el('button.big.quiet', { text: 'Same person as…', style: { marginTop: '8px' },
+        onclick: () => mergeSheet(ctx, person, close) }) : null,
       el('button.big.warn', { text: 'Delete this debt', style: { marginTop: '8px' }, onclick: async () => {
         if (!await confirmSheet('Delete the debt',
           'Written down by mistake? Every entry for this person is removed and the money goes back where it was.',
@@ -126,10 +159,23 @@ function settleSheet(ctx, person) {
   });
 }
 
-/* The person is the account: the same name reuses the same one. */
+/* The person is the account. A name written a second time, spelled a little
+   differently, used to open a second account — and the debt of one person sat
+   in two halves, each looking complete. Anything that folds to the same name
+   is the same person without asking; anything close enough to be a slip is
+   asked about, because only the booth knows whether it really has both a
+   Modest and a Modeste. */
 async function accountFor(name) {
-  const found = store.state.debtAccounts.find((a) => a.name.toLowerCase() === name.toLowerCase());
-  if (found) return found.account_id;
+  const known = store.state.debtAccounts;
+  const same = known.find((a) => foldName(a.name) === foldName(name));
+  if (same) return same.account_id;
+
+  const near = known.find((a) => looksLike(a.name, name));
+  if (near && await confirmSheet('Is this the same person?',
+    `The booth already knows ${near.name}. Writing ${name.trim()} as well makes two people, and the debt of one is split in two.`,
+    { okLabel: `Yes, ${near.name}`, cancelLabel: `No, ${name.trim()} is someone else` })) {
+    return near.account_id;
+  }
   const created = await store.addDebtAccount(name);
   return created.account_id;
 }
@@ -142,4 +188,6 @@ function effect(direction, st) {
     : `${w} goes up by ${money(a, { dp: 0 })} and the same amount is owed. The capital does not move.`;
 }
 
-export { addSheet as entrySheet };
+/* The counts are where the balances live, so they are where a debt is written
+   and settled. The pen at the foot of the page writes lines, nothing else. */
+export { addSheet as entrySheet, settleSheet as personSheet };

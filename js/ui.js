@@ -72,7 +72,7 @@ export function toast(msg, { error = false, ms = 2400 } = {}) {
   document.body.append(t);
   setTimeout(() => t.remove(), ms);
 }
-export function confirmSheet(title, message, { danger = false, okLabel = 'Confirm' } = {}) {
+export function confirmSheet(title, message, { danger = false, okLabel = 'Confirm', cancelLabel = 'Cancel' } = {}) {
   return new Promise((resolve) => {
     let done = false;
     sheet(title, ({ close }) => [
@@ -80,7 +80,7 @@ export function confirmSheet(title, message, { danger = false, okLabel = 'Confir
       el(`button.big${danger ? '.warn' : ''}`, {
         text: okLabel, onclick: () => { done = true; resolve(true); close(); },
       }),
-      el('button.big.quiet', { text: 'Cancel', style: { marginTop: '8px' }, onclick: () => close() }),
+      el('button.big.quiet', { text: cancelLabel, style: { marginTop: '8px' }, onclick: () => close() }),
     ], { onClose: () => { if (!done) resolve(false); } });
   });
 }

@@ -243,6 +243,18 @@ export async function editDebtAccount(account_id, patch) {
 }
 export const archiveDebtAccount = (id) => editDebtAccount(id, { archived: true });
 
+/* "Modest" and "Modeste" were two people in the register and one person in the
+   booth, so a single debt sat in two halves. Merging re-points every entry of
+   one onto the other — as new versions, so the move travels to every device
+   and the old reading stays in the history — and puts the empty name away. */
+export async function mergeDebtAccounts(fromId, intoId) {
+  if (!fromId || !intoId || fromId === intoId) return;
+  for (const e of state.debtEntries.filter((e) => e.account_id === fromId)) {
+    await write('debt_entry_versions', stamp({ ...e, account_id: intoId }));
+  }
+  return archiveDebtAccount(fromId);
+}
+
 export async function addDebtEntry(f) {
   const now = new Date();
   return write('debt_entry_versions', stamp({
