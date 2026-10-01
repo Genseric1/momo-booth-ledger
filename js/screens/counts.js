@@ -47,6 +47,27 @@ function countSheet(vals, upToDay, { hint = null, ctx = null } = {}) {
     el('div.countrow.total', el('label', { text: 'TOTAL' }), total));
 }
 
+/* What was written today, shown underneath the morning count and outside it.
+
+   A button that writes something must show what it wrote. The morning count
+   cannot: it is what was in the booth before the first customer, so a debt
+   made at eleven has no business in it — and a lending written from that
+   screen simply vanished, with nothing to say where it had gone. It goes
+   here instead, under its own heading, counted tonight and not this morning. */
+function writtenToday(ctx) {
+  const mine = store.state.debtEntries.filter((e) => e.day === ctx.date);
+  const people = openBalances(mine, store.state.debtAccounts);
+  if (!people.length) return null;
+  const open = sync.canWrite() ? (p) => () => personSheet(ctx, p) : () => null;
+
+  return el('div', { style: { marginTop: '20px' } },
+    el('p.note', { text: 'WRITTEN TODAY — counted tonight, not in this morning' }),
+    el('div.countsheet', ...people.map((p) =>
+      el(`${open(p) ? 'button' : 'div'}.countrow.owed`, { onclick: open(p) },
+        el('label', { text: p.name }, el('small', { text: p.net > 0 ? 'owes us' : 'we owe' })),
+        el(`div.v.num.${p.net > 0 ? 'pos' : 'neg'}`, { text: money(p.net, { sign: p.net < 0, dp: 0 }) })))));
+}
+
 /* The two buttons that write a debt. They sit under the count because that is
    where a debt is a figure in the capital rather than a line at the counter:
    written here, beside the wallets it moves. */
@@ -58,7 +79,7 @@ function debtButtons(ctx, { carried = false } = {}) {
       onclick: () => entrySheet(ctx, 'we_owe') }),
     carried
       ? el('p.note', { style: { marginTop: '10px' }, text:
-          'The names above are what was still standing last night — that is what the booth opened with. A debt written now belongs to today, so it appears in tonight’s count, not in this one.' })
+          'The names in the count above are what the booth opened with last night. What you write now is listed separately and counts tonight.' })
       : null);
 }
 
@@ -106,6 +127,7 @@ export function morningScreen(ctx) {
       },
     }) : null,
     sheet,
+    writtenToday(ctx),
     debtButtons(ctx, { carried: true }),
     !sync.canWrite() ? null : el('button.big', {
       text: 'Save the morning count',
