@@ -84,12 +84,16 @@ export function buildRegister({
     if (!lines.length && !o.balances) continue;
 
     room(70);
+    const rep = reportOf(date);
     const live = lines.filter((t) => !t.cancelled).length;
     pdf.text(M, y + 11, dayLabel(date), { size: 12, bold: true, color: INK });
     pdf.text(right, y + 11, countLines(live), { size: 9, color: FAINT, align: 'right' });
     y += 18;
     pdf.line(M, y, right, y, { width: 0.5, color: FAINT });
     y += 8;
+
+    /* the morning opens the day, above the lines it opened */
+    if (o.balances) pointBlock(rep, date, 'morning');
 
     for (const t of lines) {
       room(LINE + 4);
@@ -106,7 +110,8 @@ export function buildRegister({
       y += LINE;
     }
 
-    if (o.balances) dayTotals(reportOf(date), date);
+    /* and the evening closes it, below the lines it closed */
+    if (o.balances) pointBlock(rep, date, 'evening');
     y += 14;
   }
 
@@ -118,28 +123,38 @@ export function buildRegister({
   /* ── what each wallet held at the end of that day ── */
   /* The block written at the foot of a day, the way it is written by hand:
      one figure a line, the people beside the wallets, the total underlined. */
-  function dayTotals(rep, date) {
-    if (!rep.hasOpening && !rep.hasClosing) return;
-    /* A counted day prints the people it was signed off with. Reading the
-       live list instead would put names and amounts above a TOTAL worked out
-       from the saved ones, and the block would not add up to itself. */
-    const kept = rep.hasClosing ? days.get(date)?.closing?.debts : null;
-    const owing = Array.isArray(kept)
-      ? kept.filter((p) => Math.abs(p.net) > 0.004)
+  /* A day has two points, and the register prints both: the morning above the
+     lines it opened, the evening below the lines it closed. That is the order
+     they happen in, and it is what lets the booth read back what somebody owed
+     on a morning, on the evening after it, and on the morning after that. */
+  function pointBlock(rep, date, which) {
+    const isMorning = which === 'morning';
+    if (isMorning ? !rep.hasOpening : (!rep.hasOpening && !rep.hasClosing)) return;
+
+    /* A point prints the people it was signed off with. Reading the live list
+       instead would put names and amounts above a TOTAL worked out from the
+       saved ones, and the block would not add up to itself. */
+    const snap = isMorning ? days.get(date)?.opening : (rep.hasClosing ? days.get(date)?.closing : null);
+    const owing = Array.isArray(snap?.debts)
+      ? snap.debts.filter((p) => Math.abs(p.net) > 0.004)
       : openBalances(debtEntries, debtAccounts, date);
+
+    const wallets = isMorning ? rep.opening : rep.hasClosing ? rep.real : rep.expected;
+    const capital = isMorning ? rep.openingCapital : rep.hasClosing ? rep.realCapital : rep.expectedCapital;
+    const heading = isMorning ? 'MORNING' : rep.hasClosing ? 'EVENING' : 'EVENING — expected';
+
     const lines = [
-      ...WALLETS.map((w) => [WALLET_LABEL[w], rep.hasClosing ? rep.real[w] : rep.expected[w]]),
+      ...WALLETS.map((w) => [WALLET_LABEL[w], wallets[w]]),
       ...owing.map((p) => [p.name, p.net]),
     ];
-    /* if the block cannot follow its own lines, it says which day it closes */
-    const broke = room(lines.length * 17 + 60);
+    /* if the block cannot follow its own lines, it says which day it belongs to */
+    const broke = room(lines.length * 17 + 76);
 
     const boxL = M + (right - M) * 0.46;         // a block, set to the right
     y += 12;
-    if (broke) {
-      pdf.text(boxL, y + 10, `${dayLabel(date)} — closing`, { size: 9.5, color: GREY });
-      y += 18;
-    }
+    pdf.text(boxL, y + 10, broke ? `${dayLabel(date)} — ${heading.toLowerCase()}` : heading,
+      { size: 9, bold: true, color: FAINT });
+    y += 16;
     for (const [label, value] of lines) {
       pdf.text(boxL, y + 11, pdf.fit(label, (right - boxL) * 0.6, 10), { size: 10, color: GREY });
       pdf.text(right, y + 11, money(value, { sign: value < 0, dp: 0 }), { size: 11, color: INK, align: 'right' });
@@ -148,13 +163,13 @@ export function buildRegister({
     y += 4;
     pdf.line(boxL, y, right, y, { width: 1, color: INK });
     y += 6;
-    pdf.text(boxL, y + 12, rep.hasClosing ? 'TOTAL' : 'EXPECTED', { size: 10, bold: true, color: INK });
-    pdf.text(right, y + 12, amt(rep.hasClosing ? rep.realCapital : rep.expectedCapital),
-      { size: 13, bold: true, color: INK, align: 'right' });
+    pdf.text(boxL, y + 12, 'TOTAL', { size: 10, bold: true, color: INK });
+    pdf.text(right, y + 12, amt(capital), { size: 13, bold: true, color: INK, align: 'right' });
     y += 18;
     pdf.line(boxL, y, right, y, { width: 0.6, color: INK });
     y += 10;
 
+    if (isMorning) return;
     if (rep.hasClosing && Math.abs(rep.totalGap) > 0.004) {
       const shown = rep.residualGap != null ? rep.residualGap : rep.totalGap;
       const said = o.extras && rep.estimated_extras != null

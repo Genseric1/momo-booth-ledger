@@ -303,3 +303,36 @@ test('the register prints the day the booth signed off', async () => {
   assert.ok(!printed.includes('787,000'), 'not what the live list says now');
   assert.ok(!printed.includes('957,000'), 'and no total built from it');
 });
+
+/* A day has two points and the register prints both: the morning above the
+   lines it opened, the evening below the lines it closed. That is how the
+   booth reads back what somebody owed on a morning, on the evening after it,
+   and on the morning after that. */
+test('the register prints the morning and the evening of each day', () => {
+  const day = '2026-09-30';
+  const bytes = buildRegister({
+    boothName: 'PACSBI MoMo booth',
+    range: { start: day, end: day },
+    days: new Map([[day, {
+      date: day,
+      opening: { MTN: 100000, TELECEL: 50000, AT: 40000, CASH: 10000,
+        debts: [{ name: 'Modeste', net: 10000 }] },
+      closing: { MTN: 98500, TELECEL: 51200, AT: 40000, CASH: 12400,
+        debts: [{ name: 'Modeste', net: 10000 }, { name: 'Sephora', net: -30000 }] },
+    }]]),
+    txs: [{ tx_id: '1', day, time: `${day}T09:05:00Z`, type: 'cash_in',
+      wallet: 'MTN', amount: 1500, cancelled: false }],
+    options: { balances: true },
+  });
+  const printed = pdfText(bytes);
+
+  assert.ok(/MORNING/.test(printed), 'the morning is there');
+  assert.ok(/EVENING/.test(printed), 'and the evening');
+  assert.ok(printed.indexOf('MORNING') < printed.indexOf('EVENING'), 'morning first');
+
+  assert.ok(printed.includes('210,000'), 'A + B: 200,000 and 10,000 owed');
+  assert.ok(printed.includes('182,100'), 'C + D: 202,100, plus 10,000, less 30,000');
+  /* the morning's line sits above the day's own line, which sits above the evening */
+  assert.ok(printed.indexOf('210,000') < printed.indexOf('1,500'));
+  assert.ok(printed.indexOf('1,500') < printed.indexOf('182,100'));
+});
