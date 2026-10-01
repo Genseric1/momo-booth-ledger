@@ -132,3 +132,32 @@ test('an empty answer from the server is not an error', async () => {
   assert.equal(await readBody(new Response('   ', { status: 200 })), null);
   assert.deepEqual(await readBody(new Response('[{"vid":"a"}]')), [{ vid: 'a' }]);
 });
+
+/* Three devices showed three different totals for the same evening. The
+   wallets agreed; the debts did not. A device that had the entries but not yet
+   the names dropped the nameless ones from the list — while still counting
+   them in the capital. Reproduced with the real figures of 30 Sep 2026. */
+test('a debt whose name has not arrived yet still counts, and still shows', async () => {
+  const { openBalances, NO_NAME, dayReport } = await import('../js/calc.js');
+
+  const day = '2026-09-30';
+  const entries = [
+    { entry_id: 'e1', account_id: 'a1', day, kind: 'lend', wallet: 'CASH', amount: 20571, cancelled: false },
+    { entry_id: 'e2', account_id: 'a2', day, kind: 'lend', wallet: 'CASH', amount: 50000, cancelled: false },
+  ];
+  const accounts = [{ account_id: 'a1', name: 'Modeste' }];   // a2 has not reached this device
+
+  const open = openBalances(entries, accounts, day);
+  assert.equal(open.length, 2, 'the nameless one is not dropped');
+  assert.ok(open.some((p) => p.name === NO_NAME), 'it is shown without a name');
+  assert.equal(open.reduce((t, p) => t + p.net, 0), 70571);
+
+  /* the heart of it: what the count screen adds up has to be the capital the
+     day sheet works out, on every device, whatever it has received */
+  const counted = { MTN: 18639, TELECEL: 7806, AT: 5401, CASH: 170406 };
+  const rep = dayReport({ day: { date: day, closing: counted }, txs: [], dayDebts: entries });
+  const onScreen = Object.values(counted).reduce((a, b) => a + b, 0)
+    + open.reduce((t, p) => t + p.net, 0);
+  assert.equal(onScreen, rep.realCapital, 'the total on the screen is the real capital');
+  assert.equal(onScreen, 272823);
+});

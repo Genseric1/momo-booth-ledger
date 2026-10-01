@@ -8,7 +8,7 @@
 import { Pdf } from './pdf.js';
 import { LOGO, logoBytes } from './logo.js';
 import { WALLETS, NETWORKS, WALLET_LABEL, money, dayLabel, displayNumber, toP, toGhs, sum } from './util.js';
-import { dayReport, debtBalances } from './calc.js';
+import { dayReport, debtBalances, openBalances } from './calc.js';
 
 const INK = [0.09, 0.19, 0.42];
 const GREY = [0.48, 0.52, 0.58];
@@ -120,10 +120,7 @@ export function buildRegister({
      one figure a line, the people beside the wallets, the total underlined. */
   function dayTotals(rep, date) {
     if (!rep.hasOpening && !rep.hasClosing) return;
-    const bal = debtBalances(debtEntries.filter((e) => e.day <= date));
-    const owing = debtAccounts
-      .map((a) => ({ name: a.name, net: bal.perAccount.get(a.account_id)?.net || 0 }))
-      .filter((p) => Math.abs(p.net) > 0.004);
+    const owing = openBalances(debtEntries, debtAccounts, date);
     const lines = [
       ...WALLETS.map((w) => [WALLET_LABEL[w], rep.hasClosing ? rep.real[w] : rep.expected[w]]),
       ...owing.map((p) => [p.name, p.net]),
@@ -195,9 +192,7 @@ export function buildRegister({
 
   if (o.debts) {
     const bal = debtBalances(debtEntries.filter((e) => e.day <= range.end));
-    const open = debtAccounts
-      .map((a) => ({ name: a.name, net: bal.perAccount.get(a.account_id)?.net || 0 }))
-      .filter((p) => Math.abs(p.net) > 0.004);
+    const open = openBalances(debtEntries, debtAccounts, range.end);
     block('STILL OWED');
     if (!open.length) pair('Nobody owes anybody', '—');
     for (const p of open) pair(`${p.name} — ${p.net > 0 ? 'owes us' : 'we owe'}`, amt(Math.abs(p.net)));

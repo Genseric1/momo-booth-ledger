@@ -58,6 +58,28 @@ export function debtBalances(entries, upToDay = null) {
   };
 }
 
+/* A debt whose name has not reached this device yet. It still counts in the
+   capital, so it is still shown — under this instead of a name. */
+export const NO_NAME = 'name not here yet';
+
+/* Who is owing and who is owed, built from the entries themselves rather than
+   from the list of names.
+
+   It used to be built the other way round — walk the names, look up what each
+   one owes — and an entry whose name had not yet arrived simply vanished from
+   the list. It kept counting in the capital, because the capital is worked out
+   from the entries; so the screen showed a total that did not add up from the
+   lines above it, and three devices showed three different totals for the same
+   evening. An entry is never dropped now: at worst it has no name yet. */
+export function openBalances(entries, accounts = [], upToDay = null) {
+  const bal = debtBalances(entries, upToDay);
+  const named = new Map(accounts.map((a) => [a.account_id, a.name]));
+  return [...bal.perAccount]
+    .map(([account_id, b]) => ({ account_id, name: named.get(account_id) || NO_NAME, ...b }))
+    .filter((p) => Math.abs(p.net) > 0.004)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /* ── the day sheet ───────────────────────────────────────────────────────
    day       : { date, opening?, closing?, estimated_extras?, closed? }
    txs       : transactions of that day (cancelled ones may be included)

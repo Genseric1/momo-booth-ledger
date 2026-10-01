@@ -5,21 +5,15 @@
 
 import { el, fill, sheet, toast, amountInput, confirmSheet } from '../ui.js';
 import { WALLETS, WALLET_LABEL, money, today } from '../util.js';
-import { debtBalances } from '../calc.js';
+import { openBalances } from '../calc.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 
 /* One person = one open balance, whichever way it points. */
-function people() {
-  const bal = debtBalances(store.state.debtEntries);
-  return store.state.debtAccounts.map((a) => {
-    const b = bal.perAccount.get(a.account_id) || { owed_to_us: 0, we_owe: 0, net: 0 };
-    return { ...a, ...b, open: Math.abs(b.net) > 0.004 };
-  });
-}
+const people = () => openBalances(store.state.debtEntries, store.state.debtAccounts);
 
 export function debtsScreen(ctx) {
-  const open = people().filter((p) => p.open);
+  const open = people();
   const owedToUs = open.filter((p) => p.net > 0).reduce((t, p) => t + p.net, 0);
   const weOwe = open.filter((p) => p.net < 0).reduce((t, p) => t - p.net, 0);
   const write = sync.canWrite();

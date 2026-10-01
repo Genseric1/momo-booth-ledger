@@ -5,7 +5,7 @@
 
 import { el, toast, fill, amountInput } from '../ui.js';
 import { WALLETS, WALLET_LABEL, money, dayLabel, addDays } from '../util.js';
-import { debtBalances } from '../calc.js';
+import { openBalances } from '../calc.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import { reportFor } from './page.js';
@@ -13,12 +13,8 @@ import { reportFor } from './page.js';
 /* Who still owes, and who is still owed, as things stand on that day. A debt is
    part of the capital, so this is where it belongs — beside the wallets that
    were counted, not among the lines of the page. */
-function owing(upToDay) {
-  const bal = debtBalances(store.state.debtEntries.filter((e) => e.day <= upToDay));
-  return store.state.debtAccounts
-    .map((a) => ({ name: a.name, net: bal.perAccount.get(a.account_id)?.net || 0 }))
-    .filter((p) => Math.abs(p.net) > 0.004);
-}
+const owing = (upToDay) =>
+  openBalances(store.state.debtEntries, store.state.debtAccounts, upToDay);
 
 /* The sheet of the day: the four wallets to fill in, then every person who
    still owes or is still owed, already written down, and the total underneath.
