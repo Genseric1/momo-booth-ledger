@@ -57,8 +57,17 @@ export function morningScreen(ctx) {
   const prev = reportFor(addDays(ctx.date, -1));
   const vals = { ...(rep.hasOpening ? rep.opening : {}) };
 
-  /* every debt still standing shows at both counts, until it is paid back */
-  const sheet = countSheet(vals, ctx.date);
+  /* The morning is before the first customer, so the debts that belong in it
+     are the ones carried over from yesterday — never the ones made during the
+     day that has not started yet.
+
+     It used the day itself, and a debt written at eleven in the morning was
+     counted in a total that claims to describe eight o'clock. The booth closed
+     one evening on 202,252 and opened the next morning on 257,000: the whole
+     difference was money lent out after that morning count was taken. The
+     button right below says yesterday's figure, and the total under it
+     disagreed with it on the same screen. */
+  const sheet = countSheet(vals, addDays(ctx.date, -1));
   if (!sync.canWrite()) readOnly(sheet);
 
   return el('div.sheetview',

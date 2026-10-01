@@ -65,3 +65,33 @@ test('6 — lending 200 cash: cash down, owed to us up, capital unchanged', () =
   assert.equal(bal.owed_to_us, 200);
   assert.equal(bal.perAccount.get('a').net, 200);
 });
+
+/* The morning opens where the evening closed. Kojo's booth ended 30 Sep on
+   202,252 and the morning of 1 Oct announced 257,000 — the difference was
+   money lent out hours after that morning count was supposed to describe. */
+test('the morning count carries yesterday\'s debts, not today\'s', async () => {
+  const { openBalances, dayReport } = await import('../js/calc.js');
+
+  const lentToday = [{ entry_id: 'e1', account_id: 'a1', day: '2026-10-01',
+    kind: 'lend', wallet: 'CASH', amount: 70571, cancelled: false }];
+  const accounts = [{ account_id: 'a1', name: 'Modeste' }];
+  const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
+
+  const closed = dayReport({
+    day: { date: '2026-09-30', closing: { MTN: 18639, TELECEL: 7806, AT: 5401, CASH: 170406 } },
+    txs: [], dayDebts: [],
+  });
+  assert.equal(closed.realCapital, 202252, 'what the booth was worth that evening');
+
+  /* the morning's cut-off: the end of the day before */
+  const carried = openBalances(lentToday, accounts, '2026-09-30');
+  assert.equal(carried.length, 0, 'a debt made today is not in this morning');
+
+  const opening = { MTN: 18539, TELECEL: 6806, AT: 5401, CASH: 171436 };
+  const morning = sum(opening) + carried.reduce((t, p) => t + p.net, 0);
+  assert.equal(morning, 202182, 'the morning is the money that is there, and nothing else');
+  assert.ok(Math.abs(morning - closed.realCapital) < 100, 'it opens where the evening closed');
+
+  /* the evening's cut-off: the day itself — tonight the debt does count */
+  assert.equal(openBalances(lentToday, accounts, '2026-10-01').length, 1);
+});
