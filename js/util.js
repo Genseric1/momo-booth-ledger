@@ -14,7 +14,7 @@ export const KIND_LABEL = {
 
 /* Ghana prefixes. Only ever a guess: numbers are portable, so the wallet stays editable. */
 const PREFIX = {
-  '024': 'MTN', '054': 'MTN', '055': 'MTN', '059': 'MTN', '025': 'MTN',
+  '024': 'MTN', '054': 'MTN', '055': 'MTN', '059': 'MTN', '025': 'MTN', '053': 'MTN',
   '020': 'TELECEL', '050': 'TELECEL',
   '026': 'AT', '056': 'AT', '027': 'AT', '057': 'AT', '023': 'AT',
 };
