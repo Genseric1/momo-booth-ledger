@@ -3,7 +3,7 @@
    sentence whether it falls right, and never decides for the agent whether a
    difference is a mistake or a fee they charged on top.                      */
 
-import { el, toast, fill, amountInput } from '../ui.js';
+import { el, toast, fill, amountInput, confirmSheet } from '../ui.js';
 import { WALLETS, WALLET_LABEL, money, dayLabel, addDays } from '../util.js';
 import { openBalances } from '../calc.js';
 import * as store from '../store.js';
@@ -28,7 +28,20 @@ function countSheet(vals, upToDay, { hint = null, ctx = null } = {}) {
   const people = owing(upToDay);
   const debts = people.reduce((t, p) => t + p.net, 0);
   const total = el('div.v.num');
-  const retotal = () => { total.textContent = money(sumOf(vals) + debts, { dp: 0 }); };
+  const waiting = el('small');
+
+  /* A sum that leaves out the wallets is not a total. The four fields start
+     empty on purpose — the evening is counted, not copied — and while they
+     are, adding them to the debts gave a figure that looked like the booth's
+     worth and was only what people owed: 40,000 under four wallets holding
+     two hundred thousand. It says nothing at all until it can say the truth. */
+  const retotal = () => {
+    const missing = WALLETS.filter((w) => vals[w] === '' || vals[w] == null);
+    total.textContent = missing.length ? '—' : money(sumOf(vals) + debts, { dp: 0 });
+    waiting.textContent = missing.length
+      ? `still to count: ${missing.map((w) => (w === 'CASH' ? 'cash' : WALLET_LABEL[w])).join(', ')}`
+      : '';
+  };
 
   const rows = WALLETS.map((w) => el('div.countrow',
     el('label', { for: `count-${w}`, text: w === 'CASH' ? 'Cash in the box' : WALLET_LABEL[w] },
@@ -44,7 +57,7 @@ function countSheet(vals, upToDay, { hint = null, ctx = null } = {}) {
     ...people.map((p) => el(`${open(p) ? 'button' : 'div'}.countrow.owed`, { onclick: open(p) },
       el('label', { text: p.name }, el('small', { text: p.net > 0 ? 'owes us' : 'we owe' })),
       el(`div.v.num.${p.net > 0 ? 'pos' : 'neg'}`, { text: money(p.net, { sign: p.net < 0, dp: 0 }) }))),
-    el('div.countrow.total', el('label', { text: 'TOTAL' }), total));
+    el('div.countrow.total', el('label', { text: 'TOTAL' }, waiting), total));
 }
 
 /* What was written today, shown underneath the morning count and outside it.
@@ -82,6 +95,14 @@ function debtButtons(ctx, { carried = false } = {}) {
           'The names in the count above are what the booth opened with last night. What you write now is listed separately and counts tonight.' })
       : null);
 }
+
+/* Four wallets at nothing is a booth with nothing in it. It happens by saving
+   a sheet that was never filled, and once saved it is what every device reads
+   and what the register prints — so it is worth one question. */
+const countedNothing = (vals) => WALLETS.every((w) => !(Number(vals[w]) > 0));
+const reallyEmpty = (when) => confirmSheet(`${when} count of nothing?`,
+  'All four wallets are at zero. That says the booth holds no money at all. If they have not been counted yet, go back and count them.',
+  { okLabel: 'Yes, the booth is empty' });
 
 /* A read-only account sees the figures as text, not as fields to fill. */
 function readOnly(field) {
@@ -132,7 +153,12 @@ export function morningScreen(ctx) {
     !sync.canWrite() ? null : el('button.big', {
       text: 'Save the morning count',
       style: { marginTop: '18px' },
-      onclick: async () => { await store.setOpening(ctx.date, vals, ctx.agent); toast('Morning saved'); ctx.go('page'); },
+      onclick: async () => {
+        if (countedNothing(vals) && !await reallyEmpty('Morning')) return;
+        await store.setOpening(ctx.date, vals, ctx.agent);
+        toast('Morning saved');
+        ctx.go('page');
+      },
     }));
 }
 
@@ -160,6 +186,7 @@ export function eveningScreen(ctx) {
       !sync.canWrite() ? null : el('button.big', {
         text: 'Save the evening count',
         onclick: async () => {
+          if (countedNothing(vals) && !await reallyEmpty('Evening')) return;
           await store.setClosing(ctx.date, vals, extras === '' ? null : Number(extras), ctx.agent);
           toast('Evening saved');
           ctx.refresh();
