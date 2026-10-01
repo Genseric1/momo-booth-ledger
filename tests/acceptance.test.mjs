@@ -109,3 +109,36 @@ test('the morning count carries yesterday\'s debts, not today\'s', async () => {
   /* the evening's cut-off: the day itself — tonight the debt does count */
   assert.equal(openBalances(lentToday, accounts, '2026-10-01').length, 1);
 });
+
+/* A point the booth has signed off is a photograph: it reads the same in a
+   month as on the evening it was taken. Correcting a debt today must not move
+   the capital of a morning closed last week — and the names a point carries
+   are how the booth later asks what Modeste owed that morning, that evening,
+   and the morning after. */
+test('a saved count keeps the debts it was saved with', async () => {
+  const { dayReport, snapshotDebts } = await import('../js/calc.js');
+
+  const wallets = { MTN: 10000, TELECEL: 0, AT: 0, CASH: 0 };
+  const morning = { ...wallets, debts: [{ account_id: 'a1', name: 'Modeste', net: 10000 },
+                                        { account_id: 'a2', name: 'Séphora', net: -30000 }] };
+  assert.equal(snapshotDebts(morning), -2000000, 'owed to us adds, owed by us takes away');
+
+  /* A + B, with B a net that can be negative */
+  const r = dayReport({ day: { date: '2026-10-01', opening: morning }, txs: [] });
+  assert.equal(r.openingCapital, 10000 - 20000, 'A + B, and B is 10,000 - 30,000');
+
+  /* the live list later says something else entirely; the point does not move */
+  const later = dayReport({
+    day: { date: '2026-10-01', opening: morning },
+    txs: [],
+    dayDebts: [{ entry_id: 'x', account_id: 'a1', kind: 'lend', amount: 999999 }],
+  });
+  assert.equal(later.openingCapital, r.openingCapital, 'the morning is acted and stays acted');
+
+  /* and the evening is its own photograph, C + D */
+  const evening = { MTN: 9000, TELECEL: 0, AT: 0, CASH: 500, debts: [{ name: 'Modeste', net: 10000 }] };
+  const night = dayReport({ day: { date: '2026-10-01', opening: morning, closing: evening }, txs: [] });
+  assert.equal(night.realCapital, 9500 + 10000, 'C + D');
+  assert.equal(night.closingDebts, 10000);
+  assert.equal(night.openingDebts, -20000, 'each point keeps its own');
+});

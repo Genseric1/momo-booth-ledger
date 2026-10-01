@@ -23,10 +23,13 @@ const owing = (upToDay) =>
    disagree with the lines above it. */
 const sumOf = (o) => WALLETS.reduce((t, w) => t + (Number(o?.[w]) || 0), 0);
 
-function countSheet(vals, upToDay, { hint = null, ctx = null } = {}) {
+/* What a saved point carries, or nothing if it has never been saved. */
+const frozen = (snap) => (Array.isArray(snap?.debts) ? snap.debts : null);
+const netOf = (people) => people.reduce((t, p) => t + p.net, 0);
+
+function countSheet(vals, people, { hint = null, ctx = null } = {}) {
   const open = ctx && sync.canWrite() ? (p) => () => personSheet(ctx, p) : () => null;
-  const people = owing(upToDay);
-  const debts = people.reduce((t, p) => t + p.net, 0);
+  const debts = netOf(people);
   const total = el('div.v.num');
   const waiting = el('small');
 
@@ -128,7 +131,16 @@ export function morningScreen(ctx) {
      difference was money lent out after that morning count was taken. The
      button right below says yesterday's figure, and the total under it
      disagreed with it on the same screen. */
-  const sheet = countSheet(vals, addDays(ctx.date, -1), { ctx });
+  /* Saved, this point reads what it was saved with and nothing else. Not yet
+     saved, it opens on last night's people, already written, so Kojo adjusts
+     rather than remembers. */
+  const yesterday = addDays(ctx.date, -1);
+  const live = owing(yesterday);
+  const kept = frozen(store.getDay(ctx.date)?.opening);
+  const people = kept || frozen(store.getDay(yesterday)?.closing) || live;
+  const moved = kept && Math.abs(netOf(kept) - netOf(live)) > 0.004;
+
+  const sheet = countSheet(vals, people, { ctx });
   if (!sync.canWrite()) readOnly(sheet);
 
   return el('div.sheetview',
@@ -148,6 +160,8 @@ export function morningScreen(ctx) {
       },
     }) : null,
     sheet,
+    moved ? el('p.note', { style: { marginTop: '10px' }, text:
+      `This count was saved with ${money(netOf(kept), { dp: 0 })} of debts. What was owed last night now reads ${money(netOf(live), { dp: 0 })}. Save again to take the new figure in.` }) : null,
     writtenToday(ctx),
     debtButtons(ctx, { carried: true }),
     !sync.canWrite() ? null : el('button.big', {
@@ -155,7 +169,7 @@ export function morningScreen(ctx) {
       style: { marginTop: '18px' },
       onclick: async () => {
         if (countedNothing(vals) && !await reallyEmpty('Morning')) return;
-        await store.setOpening(ctx.date, vals, ctx.agent);
+        await store.setOpening(ctx.date, vals, ctx.agent, live);
         toast('Morning saved');
         ctx.go('page');
       },
@@ -169,7 +183,11 @@ export function eveningScreen(ctx) {
   const out = el('div.sheetview');
 
   const render = () => {
-    const sheet = countSheet(vals, ctx.date, {
+    const live = owing(ctx.date);
+    const kept = frozen(store.getDay(ctx.date)?.closing);
+    const moved = kept && Math.abs(netOf(kept) - netOf(live)) > 0.004;
+
+    const sheet = countSheet(vals, kept || live, {
       ctx, hint: (w) => `the page says ${money(rep.expected[w], { dp: 0 })}`,
     });
     if (!sync.canWrite()) readOnly(sheet);
@@ -178,6 +196,8 @@ export function eveningScreen(ctx) {
       el('h2', { text: `Evening — ${dayLabel(ctx.date, { weekday: false })}` }),
       el('p.lead', { text: 'Count for real. This is the number that matters.' }),
       sheet,
+      moved ? el('p.note', { style: { marginTop: '10px' }, text:
+        `This count was saved with ${money(netOf(kept), { dp: 0 })} of debts. What is owed now reads ${money(netOf(live), { dp: 0 })}. Save again to take the new figure in.` }) : null,
       debtButtons(ctx),
       !sync.canWrite() ? null : el('div.field',
         el('label', { text: 'Extra fees you collected today (if you know)' }),
@@ -187,7 +207,7 @@ export function eveningScreen(ctx) {
         text: 'Save the evening count',
         onclick: async () => {
           if (countedNothing(vals) && !await reallyEmpty('Evening')) return;
-          await store.setClosing(ctx.date, vals, extras === '' ? null : Number(extras), ctx.agent);
+          await store.setClosing(ctx.date, vals, extras === '' ? null : Number(extras), ctx.agent, live);
           toast('Evening saved');
           ctx.refresh();
         },

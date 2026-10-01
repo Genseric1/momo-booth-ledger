@@ -106,7 +106,10 @@ export function chipRow(items, current, onPick, { guess = null } = {}) {
 }
 
 /* An amount field that groups the digits while they are typed. */
-export function amountInput({ value = '', placeholder = '0', oninput }) {
+/* On a keyboard, Return moves on: to the next figure to be filled, and from
+   the last one to the button that saves the sheet. Four wallets counted one
+   after the other should never need the mouse. */
+export function amountInput({ value = '', placeholder = '0', oninput, ondone = null }) {
   return el('input.num', {
     type: 'text', inputmode: 'decimal', placeholder,
     value: value === '' || value == null ? '' : groupAmount(value),
@@ -114,6 +117,16 @@ export function amountInput({ value = '', placeholder = '0', oninput }) {
       const raw = parseAmount(e.target.value);
       e.target.value = groupAmount(raw);
       oninput(raw);
+    },
+    onkeydown: (e) => {
+      if (e.key !== 'Enter' && e.key !== 'Return') return;
+      e.preventDefault();
+      if (ondone) return ondone(e.target);
+      const fields = [...(e.target.closest('.sheetview, .sheet, form, body')
+        ?.querySelectorAll('input.num') || [])];
+      const next = fields[fields.indexOf(e.target) + 1];
+      if (next) return next.focus();
+      e.target.closest('.sheetview, .sheet, body')?.querySelector('button.big')?.click();
     },
   });
 }

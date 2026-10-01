@@ -95,6 +95,18 @@ export function openBalances(entries, accounts = [], upToDay = null) {
    txs       : transactions of that day (cancelled ones may be included)
    dayDebts  : debt entries of that day
    carried   : debt balances at the end of the previous day (GHS)            */
+/* A count is a photograph, and a photograph does not change afterwards.
+
+   The four wallet figures were already stored that way. What people owed was
+   not: it was worked out again from the live list every time the day was
+   looked at, so correcting a debt today moved the capital of a morning closed
+   a week ago. A point the booth has signed off must read the same in a month
+   as it did on the evening it was taken, and the names it carries are how the
+   booth can later ask what Modeste owed that morning, and that evening, and
+   the morning after. */
+export const snapshotDebts = (snap) =>
+  (Array.isArray(snap?.debts) ? snap.debts : []).reduce((t, p) => t + toP(p.net), 0);
+
 export function dayReport({ day, txs = [], dayDebts = [], carried = { owed_to_us: 0, we_owe: 0 } }) {
   const hasOpening = !!day?.opening;
   const hasClosing = !!day?.closing;
@@ -114,16 +126,27 @@ export function dayReport({ day, txs = [], dayDebts = [], carried = { owed_to_us
   const expected = zeroWallets();
   for (const w of WALLETS) expected[w] = opening[w] + movement[w];
 
+  /* what the live list says is owed as things stand */
   const owed_to_us = toP(carried.owed_to_us) + dOwed;
   const we_owe = toP(carried.we_owe) + dOwe;
+  const liveDebts = owed_to_us - we_owe;
+
+  /* what each point says, which is what it said when it was taken */
+  const openingDebts = hasOpening && day.opening.debts ? snapshotDebts(day.opening) : 0;
+  const closingDebts = hasClosing && day.closing.debts ? snapshotDebts(day.closing) : liveDebts;
+
+  const openingFloat = WALLETS.reduce((t, w) => t + opening[w], 0);
+  const openingCapital = openingFloat + openingDebts;
 
   const expectedFloat = WALLETS.reduce((t, w) => t + expected[w], 0);
-  const expectedCapital = expectedFloat + owed_to_us - we_owe;
+  /* the page cannot predict a debt, so both sides carry the same figure and
+     the difference is about the money alone */
+  const expectedCapital = expectedFloat + closingDebts;
 
   const real = zeroWallets();
   if (hasClosing) for (const w of WALLETS) real[w] = toP(day.closing[w]);
   const realFloat = WALLETS.reduce((t, w) => t + real[w], 0);
-  const realCapital = realFloat + owed_to_us - we_owe;
+  const realCapital = realFloat + closingDebts;
 
   const gap = zeroWallets();
   if (hasClosing) for (const w of WALLETS) gap[w] = real[w] - expected[w];
@@ -138,6 +161,10 @@ export function dayReport({ day, txs = [], dayDebts = [], carried = { owed_to_us
     opening: out(opening), movement: out(movement), expected: out(expected),
     real: hasClosing ? out(real) : null, gap: hasClosing ? out(gap) : null,
     owed_to_us: toGhs(owed_to_us), we_owe: toGhs(we_owe),
+    /* each point's own reading of what was owed, and what it adds up to */
+    openingDebts: toGhs(openingDebts), closingDebts: toGhs(closingDebts),
+    liveDebts: toGhs(liveDebts),
+    openingCapital: hasOpening ? toGhs(openingCapital) : null,
     expectedCapital: toGhs(expectedCapital),
     realCapital: hasClosing ? toGhs(realCapital) : null,
     totalGap: hasClosing ? toGhs(totalGap) : null,

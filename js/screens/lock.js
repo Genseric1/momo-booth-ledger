@@ -46,6 +46,34 @@ async function accountDoor(root, resolve) {
 /* ── the account ── */
 function renderSignIn(root, resolve, firstError = null) {
   let email = '', password = '', busy = false;
+  /* On a keyboard, Return is how a form is sent. Reaching for the mouse to
+     press a button that is right there is not something anyone should have to
+     learn. */
+  const onReturn = (run) => (e) => {
+    if (e.key !== 'Enter' && e.key !== 'Return') return;
+    e.preventDefault();
+    run();
+  };
+
+  async function submit() {
+    if (busy) return;
+    if (!email || !password) return render('Email and password, please.');
+    if (!navigator.onLine) return render('You need the network once, to sign in the first time.');
+    busy = true; render();
+    try {
+      await sync.signIn(email, password);
+      const check = await sync.ensureMembership();
+      if (!check.ok) { busy = false; return render(sync.notOnTheList(check)); }
+    } catch (e) {
+      busy = false;
+      return render(
+        /invalid|credential|grant/i.test(e.message) ? 'Wrong email or password.'
+        : /failed to fetch|network|load failed/i.test(e.message) ? 'Could not reach the booth server. Check the network and try again.'
+        : e.message);
+    }
+    busy = false;
+    opened(resolve);
+  }
   const render = (error = firstError) => shell(root,
     logo(),
     el('p.lead', { style: { textAlign: 'center', margin: '14px 0' },
@@ -53,32 +81,17 @@ function renderSignIn(root, resolve, firstError = null) {
     el('div.field',
       el('label', { text: 'Email' }),
       el('input', { type: 'email', inputmode: 'email', autocomplete: 'username', value: email,
-        oninput: (e) => { email = e.target.value.trim(); } })),
+        oninput: (e) => { email = e.target.value.trim(); },
+        onkeydown: onReturn(() => submit()) })),
     el('div.field',
       el('label', { text: 'Password' }),
       el('input', { type: 'password', autocomplete: 'current-password', value: password,
-        oninput: (e) => { password = e.target.value; } })),
+        oninput: (e) => { password = e.target.value; },
+        onkeydown: onReturn(() => submit()) })),
     error ? el('p.note', { style: { color: 'var(--red)' }, text: error }) : null,
     el('button.big', {
       text: busy ? 'Signing in…' : 'Sign in', disabled: busy,
-      onclick: async () => {
-        if (!email || !password) return render('Email and password, please.');
-        if (!navigator.onLine) return render('You need the network once, to sign in the first time.');
-        busy = true; render();
-        try {
-          await sync.signIn(email, password);
-          const check = await sync.ensureMembership();
-          if (!check.ok) { busy = false; return render(sync.notOnTheList(check)); }
-        } catch (e) {
-          busy = false;
-          return render(
-            /invalid|credential|grant/i.test(e.message) ? 'Wrong email or password.'
-            : /failed to fetch|network|load failed/i.test(e.message) ? 'Could not reach the booth server. Check the network and try again.'
-            : e.message);
-        }
-        busy = false;
-        opened(resolve);
-      },
+      onclick: () => submit(),
     }),
     CONFIG.googleSignIn
       ? el('button.big.quiet', { text: 'Continue with Google', style: { marginTop: '10px' },

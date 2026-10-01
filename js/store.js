@@ -159,7 +159,17 @@ export const datesWithData = () => {
   return [...s].sort();
 };
 
-const pickWallets = (o) => Object.fromEntries(WALLETS.map((w) => [w, Number(o?.[w]) || 0]));
+/* A count as it is stored: the four figures, and the people it carried.
+
+   The names are kept beside the amounts on purpose. A point has to be
+   readable on its own, months later, without rebuilding anything and without
+   depending on a name that may since have been merged into another. */
+const pickWallets = (o, debts) => ({
+  ...Object.fromEntries(WALLETS.map((w) => [w, Number(o?.[w]) || 0])),
+  debts: (debts || []).map((p) => ({
+    account_id: p.account_id || null, name: String(p.name || ''), net: Number(p.net) || 0,
+  })),
+});
 
 export async function setDay(date, patch) {
   const cur = getDay(date) || { date, opening: null, closing: null, estimated_extras: null, closed: false };
@@ -172,9 +182,10 @@ export async function setDay(date, patch) {
     agent: patch.agent ?? cur.agent ?? null,
   }));
 }
-export const setOpening = (date, counts, agent) => setDay(date, { opening: pickWallets(counts), agent });
-export const setClosing = (date, counts, extras, agent) =>
-  setDay(date, { closing: pickWallets(counts), estimated_extras: extras, agent });
+export const setOpening = (date, counts, agent, debts) =>
+  setDay(date, { opening: pickWallets(counts, debts), agent });
+export const setClosing = (date, counts, extras, agent, debts) =>
+  setDay(date, { closing: pickWallets(counts, debts), estimated_extras: extras, agent });
 export const closeDay = (date) => setDay(date, { closed: true });
 export const reopenDay = (date) => setDay(date, { closed: false });
 
