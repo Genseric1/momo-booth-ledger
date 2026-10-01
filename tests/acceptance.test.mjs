@@ -142,3 +142,27 @@ test('a saved count keeps the debts it was saved with', async () => {
   assert.equal(night.closingDebts, 10000);
   assert.equal(night.openingDebts, -20000, 'each point keeps its own');
 });
+
+/* One list, one total, at the bottom. The four wallets and the people are the
+   same list, and everything above the line is in the figure below it. */
+test('a count is one list and one total', async () => {
+  const { dayReport } = await import('../js/calc.js');
+
+  const point = {
+    MTN: 10000, TELECEL: 10000, AT: 10000, CASH: 10000,
+    debts: [{ name: 'Modeste', net: 50000 }, { name: 'Séphora', net: -30000 }],
+  };
+  const morning = dayReport({ day: { date: '2026-10-01', opening: point }, txs: [] });
+  assert.equal(morning.openingCapital, 60000, '40,000 + 50,000 - 30,000');
+
+  const evening = dayReport({ day: { date: '2026-10-01', closing: point }, txs: [] });
+  assert.equal(evening.realCapital, 60000, 'the evening counts the same way');
+
+  /* a debt written on the count is in the count, not beside it */
+  const written = dayReport({
+    day: { date: '2026-10-01', opening: { MTN: 18539, TELECEL: 6806, AT: 5401, CASH: 171436,
+      debts: [{ name: 'Modeste', net: 100000 }] } },
+    txs: [],
+  });
+  assert.equal(written.openingCapital, 302182, '202,182 and the 100,000 just written');
+});

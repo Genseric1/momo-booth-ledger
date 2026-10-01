@@ -63,40 +63,15 @@ function countSheet(vals, people, { hint = null, ctx = null } = {}) {
     el('div.countrow.total', el('label', { text: 'TOTAL' }, waiting), total));
 }
 
-/* What was written today, shown underneath the morning count and outside it.
-
-   A button that writes something must show what it wrote. The morning count
-   cannot: it is what was in the booth before the first customer, so a debt
-   made at eleven has no business in it — and a lending written from that
-   screen simply vanished, with nothing to say where it had gone. It goes
-   here instead, under its own heading, counted tonight and not this morning. */
-function writtenToday(ctx) {
-  const mine = store.state.debtEntries.filter((e) => e.day === ctx.date);
-  const people = openBalances(mine, store.state.debtAccounts);
-  if (!people.length) return null;
-  const open = sync.canWrite() ? (p) => () => personSheet(ctx, p) : () => null;
-
-  return el('div', { style: { marginTop: '20px' } },
-    el('p.note', { text: 'WRITTEN TODAY — counted tonight, not in this morning' }),
-    el('div.countsheet', ...people.map((p) =>
-      el(`${open(p) ? 'button' : 'div'}.countrow.owed`, { onclick: open(p) },
-        el('label', { text: p.name }, el('small', { text: p.net > 0 ? 'owes us' : 'we owe' })),
-        el(`div.v.num.${p.net > 0 ? 'pos' : 'neg'}`, { text: money(p.net, { sign: p.net < 0, dp: 0 }) })))));
-}
-
 /* The two buttons that write a debt. They sit under the count because that is
    where a debt is a figure in the capital rather than a line at the counter:
    written here, beside the wallets it moves. */
-function debtButtons(ctx, { carried = false } = {}) {
+function debtButtons(ctx) {
   if (!sync.canWrite()) return null;
   return el('div', { style: { marginTop: '16px' } },
     el('button.big.quiet', { text: 'Someone owes us', onclick: () => entrySheet(ctx, 'owed_to_us') }),
     el('button.big.quiet', { text: 'We owe someone', style: { marginTop: '8px' },
-      onclick: () => entrySheet(ctx, 'we_owe') }),
-    carried
-      ? el('p.note', { style: { marginTop: '10px' }, text:
-          'The names in the count above are what the booth opened with last night. What you write now is listed separately and counts tonight.' })
-      : null);
+      onclick: () => entrySheet(ctx, 'we_owe') }));
 }
 
 /* Four wallets at nothing is a booth with nothing in it. It happens by saving
@@ -131,13 +106,18 @@ export function morningScreen(ctx) {
      difference was money lent out after that morning count was taken. The
      button right below says yesterday's figure, and the total under it
      disagreed with it on the same screen. */
-  /* Saved, this point reads what it was saved with and nothing else. Not yet
-     saved, it opens on last night's people, already written, so Kojo adjusts
-     rather than remembers. */
-  const yesterday = addDays(ctx.date, -1);
-  const live = owing(yesterday);
+  /* One list and one total. Saved, this point reads what it was saved with
+     and nothing else. Not yet saved, it reads everything owed as things
+     stand — last night's people are still there, and whatever Kojo writes
+     this morning joins them and counts.
+
+     There is no cut-off any more. Splitting the day was a way of stopping a
+     debt written at eleven from moving a count taken at eight; a count that
+     freezes when it is signed off stops that by itself, and without cutting
+     anything in two. */
+  const live = owing(ctx.date);
   const kept = frozen(store.getDay(ctx.date)?.opening);
-  const people = kept || frozen(store.getDay(yesterday)?.closing) || live;
+  const people = kept || live;
   const moved = kept && Math.abs(netOf(kept) - netOf(live)) > 0.004;
 
   const sheet = countSheet(vals, people, { ctx });
@@ -161,9 +141,8 @@ export function morningScreen(ctx) {
     }) : null,
     sheet,
     moved ? el('p.note', { style: { marginTop: '10px' }, text:
-      `This count was saved with ${money(netOf(kept), { dp: 0 })} of debts. What was owed last night now reads ${money(netOf(live), { dp: 0 })}. Save again to take the new figure in.` }) : null,
-    writtenToday(ctx),
-    debtButtons(ctx, { carried: true }),
+      `This count was saved with ${money(netOf(kept), { dp: 0 })} of debts. What is owed now reads ${money(netOf(live), { dp: 0 })}. Save again to take the new figure in.` }) : null,
+    debtButtons(ctx),
     !sync.canWrite() ? null : el('button.big', {
       text: 'Save the morning count',
       style: { marginTop: '18px' },

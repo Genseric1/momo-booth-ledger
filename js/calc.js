@@ -132,12 +132,12 @@ export function dayReport({ day, txs = [], dayDebts = [], carried = { owed_to_us
   const liveDebts = owed_to_us - we_owe;
 
   /* what each point says, which is what it said when it was taken */
-  /* A count saved before points kept their people has no list of its own. It
-     must still read as it always did — what was standing at the close of the
-     day before — rather than suddenly dropping its debts to nothing. */
+  /* A count saved before points kept their people has no list of its own, and
+     falls back to what is owed as things stand — the same thing its screen
+     shows — rather than suddenly dropping its debts to nothing. */
   const openingDebts = hasOpening && day.opening.debts
     ? snapshotDebts(day.opening)
-    : toP(carried.owed_to_us) - toP(carried.we_owe);
+    : liveDebts;
   const closingDebts = hasClosing && day.closing.debts ? snapshotDebts(day.closing) : liveDebts;
 
   const openingFloat = WALLETS.reduce((t, w) => t + opening[w], 0);
