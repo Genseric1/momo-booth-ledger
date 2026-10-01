@@ -81,17 +81,38 @@ export async function markSynced(store, vids) {
   await done;
 }
 
-/* Rows pulled from the server are stored as already-synced. Existing vids are
-   left untouched: the same version arriving twice is a no-op. */
+/* Rows pulled from the server are stored as already-synced, and the server's
+   copy is the one kept.
+
+   A vid never changes once it is on the server, so taking its copy is always
+   right — and it is the only way back for a device that wrote over one of its
+   own rows. One version of this app did exactly that: a correction inherited
+   the vid it was correcting, so the device changed a row in place while the
+   server, which already knew that vid, kept the original. Those two readings
+   could never meet again while the newer arrival was skipped for being
+   "already here". Now the server's reading wins and the device heals itself.
+
+   Only a row that is actually new or actually different counts as pulled: the
+   cursor deliberately re-reads a few rows every time, and the screen must not
+   redraw for rows it already had. */
 export async function mergeRemote(store, rows) {
   await open();
   if (!rows.length) return 0;
   const { t, done } = tx([store], 'readwrite');
   const os = t.objectStore(store);
   let added = 0;
+  const same = (a, b) => {
+    if (!a) return false;
+    const { pending: _p, ...was } = a;
+    return JSON.stringify(was) === JSON.stringify(b);
+  };
   for (const r of rows) {
     const req = os.get(r.vid);
-    req.onsuccess = () => { if (!req.result) { os.put({ ...r, pending: 0 }); added++; } };
+    req.onsuccess = () => {
+      if (same(req.result, r) && req.result.pending === 0) return;
+      os.put({ ...r, pending: 0 });
+      added++;
+    };
   }
   await done;
   return added;

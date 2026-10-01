@@ -248,3 +248,23 @@ test('every device joins the same two names the same way round', async () => {
     { account_id: 'y', name: 'Amadou', created_at: '2026-01-02T00:00:00Z' },
   ]), null);
 });
+
+/* Deleting a debt has to delete it everywhere, which means it has to be a new
+   version that travels — not a change made in place on one device. */
+test('a deletion is a version of its own, so every device reads it', async () => {
+  const { stamp, project } = await import('../js/store.js');
+
+  const written = { vid: 'v1', rev: '2026-10-01T09:00:00.000Z', entry_id: 'e1',
+    account_id: 'a1', kind: 'lend', wallet: 'CASH', amount: 5000, deleted: false };
+  const deletion = stamp({ ...written, deleted: true });
+
+  assert.notEqual(deletion.vid, written.vid, 'the server has never seen this one');
+  assert.ok(deletion.rev > written.rev);
+
+  /* whichever order the two rows reach a device in, it reads the same thing */
+  for (const order of [[written, deletion], [deletion, written]]) {
+    const seen = project(order, 'entry_id').get('e1');
+    assert.equal(seen.deleted, true, 'gone, on every device');
+    assert.equal(seen.amount, 5000, 'and what it was is still in the log');
+  }
+});
