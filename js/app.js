@@ -137,11 +137,26 @@ function watchForNewVersion() {
   });
 }
 
+/* Two spellings of one name are one person, and putting them back together is
+   not the booth's job. It happens here, after every arrival of new rows — and
+   it is said out loud, because it moves real money from one name to another. */
+let tidying = false;
+async function tidyNames() {
+  if (tidying || !sync.canWrite()) return;
+  tidying = true;
+  try {
+    for (const { from, into } of await store.healNames()) {
+      toast(`${from} and ${into} are one person`);
+    }
+  } catch { /* it will be tried again on the next sync */ } finally { tidying = false; }
+}
+
 async function boot() {
   /* In a sandboxed frame the getter itself can throw, so this stays guarded. */
   try { watchForNewVersion(); } catch { /* no offline cache here */ }
   await store.init();
   await sync.init();                 // loads the cached session — works offline
+  tidyNames();
   await lockScreen(root);
   store.onSyncNeeded(sync.sync);
   let seenPull = sync.status.pulledAt;
@@ -150,7 +165,7 @@ async function boot() {
     /* Lines written on another device used to land in the database and stop
        there: the screen was never told, so they only appeared if you thought
        to reload the page. A sync that brought something now redraws. */
-    if (sync.status.pulledAt !== seenPull) { seenPull = sync.status.pulledAt; wantRedraw = true; }
+    if (sync.status.pulledAt !== seenPull) { seenPull = sync.status.pulledAt; wantRedraw = true; tidyNames(); }
     /* Settings shows the state of the sync, so it has to follow it. */
     if (ctx.view === 'settings') { if (!busyTyping()) render(); return; }
     if (wantRedraw) freshen();

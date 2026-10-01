@@ -4,7 +4,7 @@
    returns immediately; sync happens in the background.                      */
 
 import * as DB from './db.js';
-import { uuid, dayKey, WALLETS } from './util.js';
+import { uuid, dayKey, WALLETS, looksLike } from './util.js';
 import { encryptField, decryptField } from './crypto.js';
 import { CONFIG, hasBackend } from './config.js';
 
@@ -253,6 +253,41 @@ export async function mergeDebtAccounts(fromId, intoId) {
     await write('debt_entry_versions', stamp({ ...e, account_id: intoId }));
   }
   return archiveDebtAccount(fromId);
+}
+
+/* Variants of one name are one person — the booth said so, for the ones that
+   exist and for the ones to come. Nobody should have to go and tidy that up by
+   hand, so the register does it itself, every time it has read something new.
+
+   The oldest name always wins. That is what lets every device reach the same
+   answer without having to agree first, and what makes running this twice
+   change nothing. It returns what it joined, so the screen can say so: this
+   moves real money from one person's name to another, and it should never
+   happen quietly. */
+export function nextMerge(accounts) {
+  const order = [...accounts].sort((a, b) =>
+    String(a.created_at).localeCompare(String(b.created_at)) || a.account_id.localeCompare(b.account_id));
+  for (let i = 0; i < order.length; i++) {
+    for (let j = i + 1; j < order.length; j++) {
+      if (looksLike(order[i].name, order[j].name)) return { keep: order[i], gone: order[j] };
+    }
+  }
+  return null;
+}
+
+export async function healNames() {
+  const live = () => [...project(state.raw.debt_account_versions, 'account_id').values()]
+    .filter((a) => !a.archived);
+
+  const joined = [];
+  for (let guard = 0; guard < 20; guard++) {
+    const pair = nextMerge(live());
+    if (!pair) break;
+    const { keep, gone } = pair;
+    await mergeDebtAccounts(gone.account_id, keep.account_id);
+    joined.push({ from: gone.name, into: keep.name });
+  }
+  return joined;
 }
 
 export async function addDebtEntry(f) {

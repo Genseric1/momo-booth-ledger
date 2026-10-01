@@ -170,10 +170,12 @@ async function accountFor(name) {
   const same = known.find((a) => foldName(a.name) === foldName(name));
   if (same) return same.account_id;
 
+  /* Nobody is asked to arbitrate a spelling in the middle of a queue: a name
+     close enough to be the same one is the same one, and the screen says which
+     person it went to rather than deciding in silence. */
   const near = known.find((a) => looksLike(a.name, name));
-  if (near && await confirmSheet('Is this the same person?',
-    `The booth already knows ${near.name}. Writing ${name.trim()} as well makes two people, and the debt of one is split in two.`,
-    { okLabel: `Yes, ${near.name}`, cancelLabel: `No, ${name.trim()} is someone else` })) {
+  if (near) {
+    toast(`Written under ${near.name}`);
     return near.account_id;
   }
   const created = await store.addDebtAccount(name);

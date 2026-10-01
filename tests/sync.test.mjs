@@ -218,3 +218,33 @@ test('two rows arriving in the same instant are both read', async () => {
   assert.ok(rest.some((r) => r.vid === 'c'), 'c comes back');
   assert.ok(rest.some((r) => r.vid === 'b'), 'b is read again, which merging ignores');
 });
+
+/* Two spellings of one name are one person, and the booth is not asked to
+   tidy that up. Every device does it on its own — so every device has to
+   reach the same answer without talking to the others first. */
+test('every device joins the same two names the same way round', async () => {
+  const { nextMerge } = await import('../js/store.js');
+
+  const accounts = [
+    { account_id: 'b', name: 'Modeste', created_at: '2026-09-29T09:00:00Z' },
+    { account_id: 'a', name: 'Modest',  created_at: '2026-09-29T08:00:00Z' },
+    { account_id: 'c', name: 'Kojo',    created_at: '2026-09-29T10:00:00Z' },
+  ];
+
+  /* whatever order the rows came down in, the oldest name is the one kept */
+  for (const order of [accounts, [...accounts].reverse(), [accounts[2], accounts[0], accounts[1]]]) {
+    const m = nextMerge(order);
+    assert.equal(m.keep.account_id, 'a', 'the oldest name survives');
+    assert.equal(m.gone.account_id, 'b');
+  }
+
+  /* once joined there is nothing left to do: running it again changes nothing */
+  assert.equal(nextMerge(accounts.filter((a) => a.account_id !== 'b')), null);
+  assert.equal(nextMerge([]), null);
+
+  /* and a booth that really has two different people keeps both */
+  assert.equal(nextMerge([
+    { account_id: 'x', name: 'Ama', created_at: '2026-01-01T00:00:00Z' },
+    { account_id: 'y', name: 'Amadou', created_at: '2026-01-02T00:00:00Z' },
+  ]), null);
+});
