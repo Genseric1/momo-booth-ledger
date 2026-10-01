@@ -14,7 +14,7 @@ import { hasBackend } from './config.js';
 
 export const status = { configured: false, online: navigator.onLine, signedIn: false,
   busy: false, lastSync: null, lastError: null, pendingCount: 0, email: null, role: null,
-  owner: false, pulledAt: null };
+  owner: false, pulledAt: null, storeErrors: {} };
 
 export const hasSession = () => !!session?.access_token;
 export const currentEmail = () => session?.user?.email || null;
@@ -328,19 +328,53 @@ function refreshOnce() {
   return renewing;
 }
 
+/* What each store is called when the screen has to name one. */
+export const STORE_LABEL = {
+  day_versions: 'days', tx_versions: 'lines', debt_account_versions: 'debt names',
+  debt_entry_versions: 'debt lines', commission_versions: 'commissions',
+};
+
+/* One store being refused is not "the sync failed": four of the five can go
+   through perfectly while the fifth is turned away. Reporting only that
+   something went wrong is how a single stuck table hides for days — so each
+   store now carries its own answer back. */
 async function syncStore(store) {
-  if (!canWrite()) return { pushed: 0, pulled: await pullStore(store) };   // a viewer only reads
-  let pushed = 0;
-  try { pushed = await pushStore(store); }
-  catch (e) {
-    if (!String(e.message).startsWith('401')) throw e;
-    if (!await refreshOnce()) {
-      await sessionDied();
-      throw new Error('Your session has ended. Sign in again.');
+  const out = { store, pushed: 0, pulled: 0, error: null };
+  try {
+    if (canWrite()) {                                   // a viewer only reads
+      try { out.pushed = await pushStore(store); }
+      catch (e) {
+        if (!String(e.message).startsWith('401')) throw e;
+        if (!await refreshOnce()) {
+          await sessionDied();
+          throw new Error('Your session has ended. Sign in again.');
+        }
+        out.pushed = await pushStore(store);
+      }
     }
-    pushed = await pushStore(store);
+    out.pulled = await pullStore(store);
+  } catch (e) {
+    out.error = e.message;
   }
-  return { pushed, pulled: await pullStore(store) };
+  return out;
+}
+
+/* What this device actually holds, store by store: how many rows, how many
+   still waiting to go up, and how far down it has read. Three devices showing
+   three different evenings is answered by reading this on each of them. */
+export async function inventory() {
+  const out = [];
+  for (const s of STORE_NAMES) {
+    out.push({
+      store: s,
+      label: STORE_LABEL[s] || s,
+      rows: (await DB.all(s)).length,
+      waiting: (await DB.pending(s)).length,
+      cursor: await DB.getMeta(`cursor:${s}`, null),
+      error: status.storeErrors[s] || null,
+    });
+  }
+  return out;
 }
 
 let running = null;
@@ -367,11 +401,16 @@ async function doSync() {
        a sync costs one trip instead of ten. */
     const done = await Promise.all(STORE_NAMES.map(syncStore));
     for (const r of done) { pushed += r.pushed; pulled += r.pulled; }
+    status.storeErrors = Object.fromEntries(done.filter((r) => r.error).map((r) => [r.store, r.error]));
     await pullBoothSettings();
     status.lastSync = new Date().toISOString();
     await DB.setMeta('lastSync', status.lastSync);
     /* the screen is watching this: it redraws when it changes */
     if (pulled) { await reload(); status.pulledAt = Date.now(); }
+    const refused = done.filter((r) => r.error);
+    if (refused.length) {
+      throw new Error(refused.map((r) => `${STORE_LABEL[r.store]} — ${r.error}`).join(' · '));
+    }
   } catch (e) {
     status.lastError = e.message;
   } finally {

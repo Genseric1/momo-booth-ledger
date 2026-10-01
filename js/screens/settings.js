@@ -12,6 +12,25 @@ const NUMBER_MODES = [
   { value: 'full', label: 'Full number' }, { value: 'off', label: 'Do not store' },
 ];
 
+/* What this device holds, store by store. When two devices disagree about a
+   day, this is the first thing to look at: it says whether a store never sent
+   what it has, never read what the others sent, or was refused outright. */
+function inventoryBlock() {
+  const box = el('div', { style: { marginTop: '12px' } },
+    el('p.note', { text: 'Reading what this device holds…' }));
+  sync.inventory().then((rows) => {
+    fill(box,
+      el('p.note', { style: { marginBottom: '6px' }, text: 'WHAT THIS DEVICE HOLDS' }),
+      ...rows.map((r) => el('p.note', {
+        style: r.error ? { color: 'var(--red)' } : {},
+        text: `${r.label}: ${r.rows} kept · ${r.waiting} to send · read up to `
+          + (r.cursor ? new Date(r.cursor).toLocaleString('en-GB') : 'nothing yet')
+          + (r.error ? ` · REFUSED: ${r.error}` : ''),
+      })));
+  }).catch(() => fill(box, el('p.note', { text: 'Could not read this device.' })));
+  return box;
+}
+
 export function settingsScreen(ctx) {
   const s = store.state.settings;
   const st = sync.status;
@@ -52,6 +71,7 @@ export function settingsScreen(ctx) {
           tile('Waiting to send', String(st.pendingCount)),
           tile('Last sync', st.lastSync ? new Date(st.lastSync).toLocaleTimeString('en-GB') : '—')),
         st.lastError ? el('p.note', { text: st.lastError }) : null,
+        hasBackend() ? inventoryBlock() : null,
         hasBackend()
           ? el('div', { style: { marginTop: '12px' } },
               el('p.note', { text: `Booth server: ${s.supabaseUrl}` }),
