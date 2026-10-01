@@ -18,18 +18,28 @@ export function txEffect(tx) {
   return e;
 }
 
-/* Effect of one debt entry: { wallets, owed_to_us, we_owe } in pesewas. */
+/* Effect of one debt entry: { wallets, owed_to_us, we_owe } in pesewas.
+
+   A debt moves no wallet. It is an undertaking, not a payment out: nothing
+   leaves the booth when one is written down, so nothing may be taken off MTN,
+   Telecel, AT or the cash box. The four figures come from the lines of the
+   page and from nowhere else — which is also why the page could once announce
+   a cash box holding less than nothing.
+
+   It stays consistent on the way back. Lending puts a claim beside the money
+   (the capital rises by what is owed); the day it is paid, the claim goes and
+   the cash that came in is found by the count that evening. The capital lands
+   where it started without either half being counted twice. */
 export function debtEffect(en) {
   const wallets = zeroWallets();
   let owed_to_us = 0, we_owe = 0;
   if (en.cancelled) return { wallets, owed_to_us, we_owe };
   const a = toP(en.amount);
-  const w = en.wallet || 'CASH';
   switch (en.kind) {
-    case 'lend':           wallets[w] -= a; owed_to_us += a; break;
-    case 'borrow':         wallets[w] += a; we_owe += a; break;
-    case 'repay_received': wallets[w] += a; owed_to_us -= a; break;
-    case 'repay_paid':     wallets[w] -= a; we_owe -= a; break;
+    case 'lend':           owed_to_us += a; break;
+    case 'borrow':         we_owe += a; break;
+    case 'repay_received': owed_to_us -= a; break;
+    case 'repay_paid':     we_owe -= a; break;
   }
   return { wallets, owed_to_us, we_owe };
 }

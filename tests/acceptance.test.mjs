@@ -53,13 +53,27 @@ test('5 — a cancelled line affects no balance but stays in the day', () => {
   assert.equal(r.cancelledCount, 1);
 });
 
-test('6 — lending 200 cash: cash down, owed to us up, capital unchanged', () => {
-  const entry = { entry_id: 'd1', day: '2026-09-28', kind: 'lend', amount: 200, wallet: 'CASH', account_id: 'a' };
+/* The booth settled this one itself, against what the spec first said: a debt
+   is an undertaking, not a payment out. Nothing leaves when it is written, so
+   nothing may be taken off any wallet — the four figures come from the lines
+   of the page and nowhere else. */
+test('6 — lending 200: nothing is taken off any wallet, and 200 is owed', () => {
+  const entry = { entry_id: 'd1', day: '2026-09-28', kind: 'lend', amount: 200, account_id: 'a' };
   const base = dayReport({ day: day(), txs: [] });
   const r = dayReport({ day: day(), txs: [], dayDebts: [entry] });
-  assert.equal(r.expected.CASH, 9800);
+
+  for (const w of ['MTN', 'TELECEL', 'AT', 'CASH']) {
+    assert.equal(r.expected[w], base.expected[w], `${w} is untouched`);
+  }
   assert.equal(r.owed_to_us, 200);
-  assert.equal(r.expectedCapital, base.expectedCapital);
+  assert.equal(r.expectedCapital, base.expectedCapital + 200, 'the claim stands beside the money');
+
+  /* and it comes back without either half being counted twice: the claim goes,
+     and the cash that arrived is found by the count that evening */
+  const paid = { entry_id: 'd2', day: '2026-09-28', kind: 'repay_received', amount: 200, account_id: 'a' };
+  const back = dayReport({ day: day(), txs: [], dayDebts: [entry, paid] });
+  assert.equal(back.owed_to_us, 0);
+  assert.equal(back.expectedCapital, base.expectedCapital, 'back where it started');
 
   const bal = debtBalances([entry]);
   assert.equal(bal.owed_to_us, 200);

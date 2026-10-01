@@ -4,7 +4,7 @@
    kinds of entry to choose from.                                             */
 
 import { el, fill, sheet, toast, amountInput, confirmSheet } from '../ui.js';
-import { WALLETS, WALLET_LABEL, money, today, foldName, looksLike } from '../util.js';
+import { money, today, foldName, looksLike } from '../util.js';
 import { openBalances } from '../calc.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
@@ -43,7 +43,7 @@ export function debtsScreen(ctx) {
         onclick: () => addSheet(ctx, 'we_owe') })) : null,
 
     el('p.note', { style: { marginTop: '18px' },
-      text: 'Lending takes the money out of the till and puts it here, so the capital does not move. When it comes back, the line leaves this page — the entries stay in the exported register.' }),
+      text: 'A debt is written down and nothing else: no wallet is touched by it. The four figures of the booth come from the lines of the page. When it is paid, the name leaves this list — the entries stay in the exported register.' }),
   );
 }
 
@@ -71,10 +71,6 @@ function addSheet(ctx, direction) {
               onclick: () => { st.fresh = true; st.name = ''; render(); } })),
       el('div.field', el('label', { text: 'How much' }),
         amountInput({ value: st.amount, oninput: (v) => { st.amount = v; sayEffect(); } })),
-      el('div.field',
-        el('label', { text: direction === 'owed_to_us' ? 'Taken out of' : 'Put into' }),
-        el('div.pick', WALLETS.map((w) => el(`button${st.wallet === w ? '.on' : ''}`, {
-          text: WALLET_LABEL[w], onclick: () => { st.wallet = w; render(); } })))),
       note,
       el('button.big', { text: 'Save', style: { marginTop: '10px' }, onclick: async () => {
         if (!st.name.trim()) return toast('Who?', { error: true });
@@ -127,9 +123,6 @@ function settleSheet(ctx, person) {
         : `We owe ${person.name} ${money(Math.abs(person.net), { dp: 0 })}.` }),
       el('div.field', el('label', { text: owed ? 'Paid back' : 'We paid back' }),
         amountInput({ value: st.amount, oninput: (v) => { st.amount = v; } })),
-      el('div.field', el('label', { text: owed ? 'Received into' : 'Paid out of' }),
-        el('div.pick', WALLETS.map((w) => el(`button${st.wallet === w ? '.on' : ''}`, {
-          text: WALLET_LABEL[w], onclick: () => { st.wallet = w; render(); } })))),
       el('button.big', { text: 'Paid back', onclick: async () => {
         const value = Number(st.amount);
         if (!(value > 0)) return toast('How much?', { error: true });
@@ -182,12 +175,13 @@ async function accountFor(name) {
   return created.account_id;
 }
 
+/* What it does, said without arithmetic the booth never agreed to: a debt is
+   written down, and no wallet is touched by it. */
 function effect(direction, st) {
-  const a = Number(st.amount || 0);
-  const w = WALLET_LABEL[st.wallet];
+  const a = money(Number(st.amount || 0), { dp: 0 });
   return direction === 'owed_to_us'
-    ? `${w} goes down by ${money(a, { dp: 0 })} and the same amount waits here. The capital does not move.`
-    : `${w} goes up by ${money(a, { dp: 0 })} and the same amount is owed. The capital does not move.`;
+    ? `${a} is written down as owed to the booth. Nothing is taken out of MTN, Telecel, AT or the cash box.`
+    : `${a} is written down as owed by the booth. Nothing is added to MTN, Telecel, AT or the cash box.`;
 }
 
 /* The counts are where the balances live, so they are where a debt is written
