@@ -2,7 +2,7 @@
    The shell is cached on install so the register opens with no network at all.
    Data never goes through here: it lives in IndexedDB and syncs separately.  */
 
-const CACHE = 'pacsbi-register-v50';
+const CACHE = 'pacsbi-register-v51';
 const SHELL = [
   '.', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/ui.js', 'js/util.js', 'js/calc.js', 'js/db.js',

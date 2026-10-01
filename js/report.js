@@ -120,7 +120,13 @@ export function buildRegister({
      one figure a line, the people beside the wallets, the total underlined. */
   function dayTotals(rep, date) {
     if (!rep.hasOpening && !rep.hasClosing) return;
-    const owing = openBalances(debtEntries, debtAccounts, date);
+    /* A counted day prints the people it was signed off with. Reading the
+       live list instead would put names and amounts above a TOTAL worked out
+       from the saved ones, and the block would not add up to itself. */
+    const kept = rep.hasClosing ? days.get(date)?.closing?.debts : null;
+    const owing = Array.isArray(kept)
+      ? kept.filter((p) => Math.abs(p.net) > 0.004)
+      : openBalances(debtEntries, debtAccounts, date);
     const lines = [
       ...WALLETS.map((w) => [WALLET_LABEL[w], rep.hasClosing ? rep.real[w] : rep.expected[w]]),
       ...owing.map((p) => [p.name, p.net]),

@@ -268,3 +268,38 @@ test('a deletion is a version of its own, so every device reads it', async () =>
     assert.equal(seen.amount, 5000, 'and what it was is still in the log');
   }
 });
+
+/* The register prints the figures the booth signed off, not the ones that are
+   true today. Otherwise names and amounts sit above a TOTAL worked out from a
+   different reading, and the block does not add up to itself. */
+test('the register prints the day the booth signed off', async () => {
+  const { buildRegister } = await import('../js/report.js');
+
+  const day = '2026-09-30';
+  const closing = {
+    MTN: 100000, TELECEL: 50000, AT: 40000, CASH: 10000,
+    debts: [{ account_id: 'a1', name: 'Modeste', net: 10000 },
+            { account_id: 'a2', name: 'Sephora', net: -30000 }],
+  };
+  /* the live list has moved a long way since that evening */
+  const entries = [
+    { entry_id: 'e1', account_id: 'a1', day, kind: 'lend', amount: 10000, cancelled: false },
+    { entry_id: 'e2', account_id: 'a2', day, kind: 'borrow', amount: 30000, cancelled: false },
+    { entry_id: 'e3', account_id: 'a1', day, kind: 'lend', amount: 777000, cancelled: false },
+  ];
+
+  const bytes = buildRegister({
+    boothName: 'PACSBI MoMo booth',
+    range: { start: day, end: day },
+    days: new Map([[day, { date: day, closing }]]),
+    txs: [], debtEntries: entries,
+    debtAccounts: [{ account_id: 'a1', name: 'Modeste' }, { account_id: 'a2', name: 'Sephora' }],
+    options: { balances: true },
+  });
+  const printed = pdfText(bytes);
+
+  assert.ok(printed.includes('180,000'), 'C + D as it was signed off');
+  assert.ok(printed.includes('10,000'), 'the amount that evening');
+  assert.ok(!printed.includes('787,000'), 'not what the live list says now');
+  assert.ok(!printed.includes('957,000'), 'and no total built from it');
+});
