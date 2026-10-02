@@ -16,7 +16,6 @@ const SCOPES = [
 const OPTIONS = [
   ['balances', 'Include opening and closing balances'],
   ['statistics', 'Include statistics'],
-  ['extras', 'Include estimated extra fees'],
   ['cancelled', 'Include cancelled lines (struck through)'],
   ['agents', 'Include who wrote each line'],
   ['fullNumbers', 'Show full customer numbers'],
@@ -135,6 +134,6 @@ export const initialExportState = () => ({
   /* null means untouched: the booth's own password is used, whatever it is
      at the moment of the export */
   password: null,
-  options: { balances: false, statistics: false, extras: false, cancelled: false,
+  options: { balances: false, statistics: false, cancelled: false,
     agents: false, fullNumbers: false },
 });

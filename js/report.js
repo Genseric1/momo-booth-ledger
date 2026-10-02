@@ -29,7 +29,7 @@ export function buildRegister({
   boothName, range, days, txs, debtEntries = [], debtAccounts = [], commissions = [],
   options = {}, password = '',
 }) {
-  const o = { balances: false, statistics: false, extras: false, cancelled: false,
+  const o = { balances: false, statistics: false, cancelled: false,
     fullNumbers: false, agents: false, ...options };
 
   const pdf = new Pdf({ size: 'A4', password, title: `${boothName} — register ${range.start} to ${range.end}` });

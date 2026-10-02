@@ -27,7 +27,7 @@ const sumOf = (o) => WALLETS.reduce((t, w) => t + (Number(o?.[w]) || 0), 0);
 const frozen = (snap) => (Array.isArray(snap?.debts) ? snap.debts : null);
 const netOf = (people) => people.reduce((t, p) => t + p.net, 0);
 
-function countSheet(vals, people, { hint = null, ctx = null } = {}) {
+function countSheet(vals, people, { ctx = null } = {}) {
   const open = ctx && sync.canWrite() ? (p) => () => personSheet(ctx, p) : () => null;
   const debts = netOf(people);
   const total = el('div.v.num');
@@ -47,8 +47,7 @@ function countSheet(vals, people, { hint = null, ctx = null } = {}) {
   };
 
   const rows = WALLETS.map((w) => el('div.countrow',
-    el('label', { for: `count-${w}`, text: w === 'CASH' ? 'Cash in the box' : WALLET_LABEL[w] },
-      hint ? el('small', { text: hint(w) }) : null),
+    el('label', { for: `count-${w}`, text: w === 'CASH' ? 'Cash in the box' : WALLET_LABEL[w] }),
     amountInput({ value: vals[w] ?? '', oninput: (v) => { vals[w] = v; retotal(); } })));
   rows.forEach((row, i) => row.querySelector('input').id = `count-${WALLETS[i]}`);
 
@@ -158,7 +157,6 @@ export function morningScreen(ctx) {
 export function eveningScreen(ctx) {
   const rep = reportFor(ctx.date);
   const vals = { ...(rep.hasClosing ? rep.real : {}) };
-  let extras = rep.estimated_extras ?? '';
   const out = el('div.sheetview');
 
   const render = () => {
@@ -166,9 +164,11 @@ export function eveningScreen(ctx) {
     const kept = frozen(store.getDay(ctx.date)?.closing);
     const moved = kept && Math.abs(netOf(kept) - netOf(live)) > 0.004;
 
-    const sheet = countSheet(vals, kept || live, {
-      ctx, hint: (w) => `the page says ${money(rep.expected[w], { dp: 0 })}`,
-    });
+    /* No prediction under the figures. It was the opening plus the lines
+       written, and this booth tops up its float during the day without those
+       top-ups being lines, so it read a negative MTN float and set Kojo
+       against a number that could not be right. He counts what is there. */
+    const sheet = countSheet(vals, kept || live, { ctx });
     if (!sync.canWrite()) readOnly(sheet);
 
     fill(out,
@@ -178,15 +178,11 @@ export function eveningScreen(ctx) {
       moved ? el('p.note', { style: { marginTop: '10px' }, text:
         `This count was saved with ${money(netOf(kept), { dp: 0 })} of debts. What is owed now reads ${money(netOf(live), { dp: 0 })}. Save again to take the new figure in.` }) : null,
       debtButtons(ctx),
-      !sync.canWrite() ? null : el('div.field',
-        el('label', { text: 'Extra fees you collected today (if you know)' }),
-        amountInput({ value: extras, placeholder: 'optional', oninput: (v) => { extras = v; } }),
-        el('div.hint', { text: 'What customers pay you on top is not written line by line, so the page cannot know it.' })),
       !sync.canWrite() ? null : el('button.big', {
         text: 'Save the evening count',
         onclick: async () => {
           if (countedNothing(vals) && !await reallyEmpty('Evening')) return;
-          await store.setClosing(ctx.date, vals, extras === '' ? null : Number(extras), ctx.agent, live);
+          await store.setClosing(ctx.date, vals, null, ctx.agent, live);
           toast('Evening saved');
           ctx.refresh();
         },

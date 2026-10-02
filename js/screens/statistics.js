@@ -183,10 +183,11 @@ function networkTable(st, period) {
 }
 
 /* ── gaps and commissions: four lines, not four sections ── */
+/* The two lines that counted gaps against what the page predicted went with
+   the verdict they belonged to: the prediction does not hold for a booth that
+   tops up its float off the page, and a check nobody can act on is not a
+   check. What is left is what can be looked into. */
 function extras(ctx) {
-  const closed = store.datesWithData().map((d) => capitalGap(d)).filter((g) => g != null);
-  const unexplained = toGhs(sum(closed, toP));
-  const withGap = closed.filter((g) => toP(g) !== 0).length;
   const cancelled = store.state.txs.filter((t) => t.cancelled);
   const month = monthKey(ctx.date);
   const com = store.state.commissions.filter((c) => c.month === month);
@@ -196,9 +197,6 @@ function extras(ctx) {
   return el('div', { style: { marginTop: '22px' } },
     el('div.seclabel', el('span', { text: 'Checks' })),
     el('div.rows',
-      row('Days with a gap', `${closed.length} evenings counted`, String(withGap)),
-      row('Unexplained, all together', 'after the extras you estimated',
-        money(unexplained, { sign: true, dp: 0 }), Math.abs(unexplained) > 0.004 ? 'neg' : ''),
       row('Struck out lines', null, String(cancelled.length)),
       el(sync.canWrite() ? 'button.r' : 'div.r', { onclick: sync.canWrite() ? () => commissionSheet(ctx) : null },
         el('div', { text: `Commission ${month}` }, el('small', { text: 'paid by the networks, never in the total' })),
@@ -207,16 +205,6 @@ function extras(ctx) {
         sync.canWrite() ? el('div.go', { text: '›' }) : null)));
 }
 
-function capitalGap(date) {
-  const rep = dayReport({
-    day: store.getDay(date) || { date },
-    txs: store.dayTxs(date),
-    dayDebts: store.dayDebtEntries(date),
-    carried: debtBalances(store.state.debtEntries.filter((e) => e.day < date)),
-  });
-  if (!rep.hasClosing) return null;
-  return rep.residualGap != null ? rep.residualGap : rep.totalGap;
-}
 
 function commissionSheet(ctx) {
   const st = { month: monthKey(ctx.date), wallet: 'MTN', amount: '' };
