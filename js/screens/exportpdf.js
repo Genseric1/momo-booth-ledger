@@ -18,7 +18,6 @@ const OPTIONS = [
   ['statistics', 'Include statistics'],
   ['extras', 'Include estimated extra fees'],
   ['cancelled', 'Include cancelled lines (struck through)'],
-  ['debts', 'Include who still owes'],
   ['agents', 'Include who wrote each line'],
   ['fullNumbers', 'Show full customer numbers'],
 ];
@@ -137,5 +136,5 @@ export const initialExportState = () => ({
      at the moment of the export */
   password: null,
   options: { balances: false, statistics: false, extras: false, cancelled: false,
-    debts: false, agents: false, fullNumbers: false },
+    agents: false, fullNumbers: false },
 });

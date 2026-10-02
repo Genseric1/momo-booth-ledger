@@ -36,7 +36,6 @@ export function menuScreen(ctx) {
       row('Evening count', rep.hasClosing ? 'written' : 'not written yet', 'evening',
         rep.hasClosing ? money(rep.realCapital, { dp: 0 }) : null),
       row('Search', 'find a line by number, amount or name', 'search'),
-      row('Debts', 'who owes, and who is owed', 'debts'),
       row('Statistics', 'volume, networks, busiest hours', 'stats'),
       row('Export a register', 'PDF for one day, a week, a month', 'export'),
       row('Settings', 'agents, numbers, sync, PIN', 'settings')),

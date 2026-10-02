@@ -198,38 +198,18 @@ export function eveningScreen(ctx) {
 }
 
 /* One sentence first, the four numbers after — not a table to decode. */
+/* After the count is saved: close the day, or reopen it.
+
+   What used to stand here was a verdict — "it falls right", or how much was
+   missing, with the four wallets set against what the page predicted. The
+   booth asked for it to go, and it was right to: the prediction is opening
+   plus the lines written, and this booth tops up its float during the day
+   without those top-ups being lines. So the page expected a negative MTN
+   float and announced tens of thousands missing, every evening, from
+   arithmetic that could not be right. A figure nobody can act on is worse
+   than no figure. */
 function verdict(rep, ctx) {
-  const gap = rep.totalGap;
-  const residual = rep.residualGap;
-  const shown = residual != null ? residual : gap;
-  const exact = Math.abs(shown) < 0.005;
-
-  const rows = el('div.rows', WALLETS.map((w) => el('div.r',
-    el('div', { text: WALLET_LABEL[w] }, el('small', { text: `page ${money(rep.expected[w], { dp: 0 })}` })),
-    el('div.sp'),
-    el('div.v.num', { text: money(rep.real[w], { dp: 0 }) }),
-    el('div.v.num', {
-      class: Math.abs(rep.gap[w]) < 0.005 ? '' : rep.gap[w] > 0 ? 'pos' : 'neg',
-      style: { width: '86px', textAlign: 'right' },
-      text: Math.abs(rep.gap[w]) < 0.005 ? '—' : money(rep.gap[w], { sign: true, dp: 0 }),
-    }))));
-
   return el('div', { style: { marginTop: '26px' } },
-    el('h2', { text: exact ? 'It falls right.' : shown > 0 ? `You have ${money(Math.abs(shown), { dp: 0 })} more` : `${money(Math.abs(shown), { dp: 0 })} is missing` }),
-    el('p.lead', {
-      text: exact
-        ? 'The page and the money agree.'
-        : residual != null
-          ? `After your ${money(rep.estimated_extras, { dp: 0 })} of extra fees, this much is still unexplained.`
-          : 'A difference is not always a mistake: the fees you charge on top are not written line by line. Write your estimate above and it will be taken off.',
-    }),
-    rows,
-    exact && WALLETS.some((w) => Math.abs(rep.gap[w]) > 0.005)
-      ? el('p.note', { text: 'The total is right but the networks do not match one by one — some lines were probably written on the wrong network.' })
-      : null,
-    ...rep.hints.map((h) => el('p.note', {
-      text: `${WALLET_LABEL[h.a]} is ${money(h.amount, { dp: 0 })} over and ${WALLET_LABEL[h.b]} is ${money(h.amount, { dp: 0 })} short — a line of ${money(h.amount, { dp: 0 })} was probably written on the wrong network.`,
-    })),
     !sync.canWrite() ? null
       : rep.closed && !sync.canReopenDay()
         ? el('p.note', { style: { marginTop: '18px' },

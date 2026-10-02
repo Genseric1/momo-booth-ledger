@@ -10,7 +10,6 @@ import { pageScreen, reportFor } from './screens/page.js';
 import { writerBar, emptyDraft } from './screens/writer.js';
 import { morningScreen, eveningScreen } from './screens/counts.js';
 import { menuScreen } from './screens/menu.js';
-import { debtsScreen } from './screens/debts.js';
 import { statsScreen } from './screens/statistics.js';
 import { exportScreen, initialExportState } from './screens/exportpdf.js';
 import { settingsScreen } from './screens/settings.js';
@@ -20,10 +19,10 @@ import { openCalendar, closeCalendar } from './screens/calendar.js';
 
 const SCREENS = {
   page: pageScreen, menu: menuScreen, morning: morningScreen, evening: eveningScreen,
-  debts: debtsScreen, stats: statsScreen, export: exportScreen, settings: settingsScreen,
+  stats: statsScreen, export: exportScreen, settings: settingsScreen,
   search: searchScreen,
 };
-const TITLE = { menu: 'Menu', morning: 'Morning', evening: 'Evening', debts: 'Debts',
+const TITLE = { menu: 'Menu', morning: 'Morning', evening: 'Evening',
   stats: 'Statistics', export: 'Export', settings: 'Settings', search: 'Search' };
 
 const ctx = {

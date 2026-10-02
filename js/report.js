@@ -30,7 +30,7 @@ export function buildRegister({
   options = {}, password = '',
 }) {
   const o = { balances: false, statistics: false, extras: false, cancelled: false,
-    debts: false, fullNumbers: false, agents: false, ...options };
+    fullNumbers: false, agents: false, ...options };
 
   const pdf = new Pdf({ size: 'A4', password, title: `${boothName} — register ${range.start} to ${range.end}` });
   const right = pdf.w - M;
@@ -169,20 +169,12 @@ export function buildRegister({
     pdf.line(boxL, y, right, y, { width: 0.6, color: INK });
     y += 10;
 
-    if (isMorning) return;
-    if (rep.hasClosing && Math.abs(rep.totalGap) > 0.004) {
-      const shown = rep.residualGap != null ? rep.residualGap : rep.totalGap;
-      const said = o.extras && rep.estimated_extras != null
-        ? `${money(rep.totalGap, { sign: true, dp: 0 })} against the page, ${amt(rep.estimated_extras)} of it extra fees`
-        : `${money(rep.totalGap, { sign: true, dp: 0 })} against the page`;
-      pdf.text(right, y + 10, said, { size: 9, color: Math.abs(shown) > 0.004 ? RED : GREY, align: 'right' });
-      y += 15;
-    }
-    for (const h of rep.hints) {
-      pdf.text(right, y + 10, `${WALLET_LABEL[h.a]} over, ${WALLET_LABEL[h.b]} short, by ${amt(h.amount)}`,
-        { size: 8.5, color: GOLD, align: 'right' });
-      y += 13;
-    }
+    /* What the booth counted is what the register states. It used to add how
+       far that was from what the page predicted — but the prediction is the
+       opening plus the lines, and this booth tops up its float during the day
+       without those top-ups being lines, so the figure was always wrong and
+       always alarming. A register states what was counted; it does not argue
+       with it. */
   }
 
   /* ── the closing figures of the whole period ── */
@@ -210,15 +202,6 @@ export function buildRegister({
     pdf.text(right, y + 11, value, { size: 11, bold, color: colour, align: 'right' });
     y += 19;
   };
-
-  if (o.debts) {
-    const bal = debtBalances(debtEntries.filter((e) => e.day <= range.end));
-    const open = openBalances(debtEntries, debtAccounts, range.end);
-    block('STILL OWED');
-    if (!open.length) pair('Nobody owes anybody', '—');
-    for (const p of open) pair(`${p.name} — ${p.net > 0 ? 'owes us' : 'we owe'}`, amt(Math.abs(p.net)));
-    pair('In the capital', money(bal.owed_to_us - bal.we_owe, { sign: true, dp: 0 }), { bold: true });
-  }
 
   if (o.statistics) {
     const amounts = live.map((t) => toP(t.amount)).sort((a, b) => a - b);
