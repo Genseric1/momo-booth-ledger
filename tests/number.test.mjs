@@ -39,7 +39,7 @@ test('the number drives the display and the network guess', () => {
   for (const p of ['024', '025', '053', '054', '055', '059']) {
     assert.equal(walletFromNumber(`${p}1112222`), 'MTN', p);
   }
-  for (const p of ['020', '050']) assert.equal(walletFromNumber(`${p}1112222`), 'TELECEL', p);
+  for (const p of ['020', '023', '050']) assert.equal(walletFromNumber(`${p}1112222`), 'TELECEL', p);
   for (const p of ['026', '027', '056', '057']) assert.equal(walletFromNumber(`${p}1112222`), 'AT', p);
   assert.equal(walletFromNumber('0991112222'), null, 'an unknown prefix guesses nothing');
 });

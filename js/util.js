@@ -15,11 +15,10 @@ export const KIND_LABEL = {
 /* Ghana prefixes. Only ever a guess: numbers are portable, so the wallet stays editable. */
 const PREFIX = {
   '024': 'MTN', '054': 'MTN', '055': 'MTN', '059': 'MTN', '025': 'MTN', '053': 'MTN',
-  '020': 'TELECEL', '050': 'TELECEL',
+  /* 023 was Glo's. The booth sees those numbers on Telecel now and says so,
+     which is worth more than the guess this file could make on its own. */
+  '020': 'TELECEL', '050': 'TELECEL', '023': 'TELECEL',
   '026': 'AT', '056': 'AT', '027': 'AT', '057': 'AT',
-  /* 023 was Glo's, and the booth does not know what such a number is today.
-     Guessing a network wrongly is worse than guessing nothing: an unknown
-     prefix leaves the pen asking, and whoever is at the counter decides. */
 };
 
 /* ── money: all arithmetic runs on integer pesewas, never on floats ── */
