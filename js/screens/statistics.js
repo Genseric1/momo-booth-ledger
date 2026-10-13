@@ -3,7 +3,7 @@
    and the rest of the page is the handful of numbers that chart cannot say.   */
 
 import { el, fill, sheet, toast, amountInput } from '../ui.js';
-import { NETWORKS, WALLET_LABEL, money, dayLabel, dayKey, monthKey, parseDay, today, toP, toGhs, sum } from '../util.js';
+import { NETWORKS, WALLET_LABEL, money, dayLabel, dayKey, monthKey, parseDay, today, addDays, toP, toGhs, sum } from '../util.js';
 import { timeChart } from '../chart.js';
 import { dayReport, debtBalances } from '../calc.js';
 import * as store from '../store.js';
@@ -20,10 +20,41 @@ const PERIODS = [
   { id: 'week', label: '7 days', days: 7 },
   { id: 'month', label: '30 days', days: 30 },
   { id: 'year', label: '12 months', months: 12 },
+  { id: 'range', label: 'Two dates' },
 ];
 
+/* A period the booth picks itself, the way a register is exported. Everything
+   below reads a period through buckets(), so a chosen range needs nothing but
+   its own buckets to work everywhere: the chart, the figures under it, the
+   networks, and the comparison with the same length before. */
+const DAY_MS = 86400000;
+const spanOf = (from, to) => Math.round((parseDay(to) - parseDay(from)) / DAY_MS) + 1;
+
+function rangeBuckets(from, to) {
+  const out = [];
+  /* day by day while that is still readable, month by month once it is not */
+  if (spanOf(from, to) <= 92) {
+    for (let d = from; d <= to; d = addDays(d, 1)) {
+      const day = parseDay(d);
+      out.push({ key: d, label: day.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+        sub: dayLabel(d), month: false });
+    }
+    return out;
+  }
+  const last = parseDay(to);
+  const m = new Date(parseDay(from).getFullYear(), parseDay(from).getMonth(), 1);
+  while (m <= last) {
+    out.push({ key: `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`,
+      label: m.toLocaleDateString('en-GB', { month: 'short' }),
+      sub: m.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), month: true });
+    m.setMonth(m.getMonth() + 1);
+  }
+  return out;
+}
+
 export function statsScreen(ctx) {
-  const st = ctx.stats || (ctx.stats = { measure: 'volume', period: 'week', network: null });
+  const st = ctx.stats || (ctx.stats = { measure: 'volume', period: 'week', network: null,
+    from: addDays(today(), -30), to: today() });
   const out = el('div.sheetview');
 
   const render = () => {
@@ -35,7 +66,12 @@ export function statsScreen(ctx) {
        moved under the finger and not one figure on the page changed, whatever
        was pressed. */
     const measure = MEASURES.find((m) => m.id === st.measure);
-    const period = PERIODS.find((p) => p.id === st.period);
+    /* whichever way round the two dates were picked */
+    const [from, to] = [st.from, st.to].sort();
+    const period = st.period === 'range'
+      ? { id: 'range', from, to,
+          label: `${dayLabel(from, { weekday: false })} to ${dayLabel(to, { weekday: false })}` }
+      : PERIODS.find((p) => p.id === st.period);
 
     const series = build(st, period);
     const previous = build(st, period, true);
@@ -48,6 +84,12 @@ export function statsScreen(ctx) {
       el('div.pick', PERIODS.map((p) => el(`button${st.period === p.id ? '.on' : ''}`, {
         text: p.label, onclick: () => { st.period = p.id; render(); },
       }))),
+      st.period !== 'range' ? null
+        : el('div.grid2', { style: { marginTop: '8px' } },
+            el('input', { type: 'date', value: st.from, max: today(),
+              onchange: (e) => { st.from = e.target.value || st.from; render(); } }),
+            el('input', { type: 'date', value: st.to, max: today(),
+              onchange: (e) => { st.to = e.target.value || st.to; render(); } })),
       el('div.pick', { style: { marginTop: '8px' } }, MEASURES.map((m) => el(`button${st.measure === m.id ? '.on' : ''}`, {
         text: m.label, onclick: () => { st.measure = m.id; render(); },
       }))),
@@ -63,7 +105,8 @@ export function statsScreen(ctx) {
         el('div.v.num', { text: measure.money ? `GHS ${fmt(total)}` : fmt(total) }),
         change == null ? el('div.s', { text: 'no earlier period to compare with' })
           : el(`div.s.${change >= 0 ? 'pos' : 'neg'}`, {
-              text: `${change >= 0 ? '+' : ''}${(change * 100).toFixed(0)}% against the ${period.label} before`,
+              text: `${change >= 0 ? '+' : ''}${(change * 100).toFixed(0)}% against the `
+                + (period.id === 'range' ? 'same length before' : `${period.label} before`),
             })),
 
       series.some((p) => p.value !== 0)
@@ -88,6 +131,11 @@ const heroLabel = (st, measure, period) => {
 
 /* ── the series behind the chart ── */
 function buckets(period, back = false) {
+  if (period.from) {
+    if (!back) return rangeBuckets(period.from, period.to);
+    const span = spanOf(period.from, period.to);
+    return rangeBuckets(addDays(period.from, -span), addDays(period.to, -span));
+  }
   const dates = store.datesWithData();
   const end = dates.at(-1) || today();
   const out = [];
