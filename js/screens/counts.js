@@ -105,21 +105,26 @@ export function morningScreen(ctx) {
      difference was money lent out after that morning count was taken. The
      button right below says yesterday's figure, and the total under it
      disagreed with it on the same screen. */
-  /* One list and one total. Saved, this point reads what it was saved with
-     and nothing else. Not yet saved, it reads everything owed as things
-     stand — last night's people are still there, and whatever Kojo writes
-     this morning joins them and counts.
+  /* One list and one total, and the list is what is owed as things stand.
 
-     There is no cut-off any more. Splitting the day was a way of stopping a
-     debt written at eleven from moving a count taken at eight; a count that
-     freezes when it is signed off stops that by itself, and without cutting
-     anything in two. */
+     A count is signed off by the button at the foot of the sheet: it says
+     "this is right, and this is the total", and it records the four figures
+     and the people together, in one go. For that signature to mean anything,
+     the sheet has to show what is being signed — so it shows the present, and
+     whatever Kojo writes or removes is there the moment he writes or removes
+     it.
+
+     It used to show the photograph instead, as soon as one had been taken.
+     Writing a debt then changed nothing on screen until the sheet was saved a
+     second time, which from the counter is indistinguishable from the app
+     having lost it. The photograph is what the register, the menu and the
+     days gone by read back; it is not what the hand filling in the sheet
+     should be looking at. */
   const live = owing(ctx.date);
   const kept = frozen(store.getDay(ctx.date)?.opening);
-  const people = kept || live;
   const moved = kept && Math.abs(netOf(kept) - netOf(live)) > 0.004;
 
-  const sheet = countSheet(vals, people, { ctx });
+  const sheet = countSheet(vals, live, { ctx });
   if (!sync.canWrite()) readOnly(sheet);
 
   return el('div.sheetview',
@@ -168,7 +173,7 @@ export function eveningScreen(ctx) {
        written, and this booth tops up its float during the day without those
        top-ups being lines, so it read a negative MTN float and set Kojo
        against a number that could not be right. He counts what is there. */
-    const sheet = countSheet(vals, kept || live, { ctx });
+    const sheet = countSheet(vals, live, { ctx });
     if (!sync.canWrite()) readOnly(sheet);
 
     fill(out,

@@ -166,3 +166,36 @@ test('a count is one list and one total', async () => {
   });
   assert.equal(written.openingCapital, 302182, '202,182 and the 100,000 just written');
 });
+
+/* The sheet shows what is being signed. A debt written on a count is on that
+   count at once, and one press of the button records the four figures and the
+   people together. */
+test('what is written on a count is on it before it is signed', async () => {
+  const { openBalances, dayReport } = await import('../js/calc.js');
+
+  const day = '2026-10-13';
+  const counted = { MTN: 20000, TELECEL: 5000, AT: 5000, CASH: 100000 };
+  const signedWithNobody = { ...counted, debts: [] };
+
+  /* signed off with nobody owing anything */
+  const photograph = dayReport({ day: { date: day, closing: signedWithNobody }, txs: [] });
+  assert.equal(photograph.realCapital, 130000);
+
+  /* Kojo then writes a debt. The sheet reads the present, so it is there. */
+  const entries = [{ entry_id: 'e1', account_id: 'a1', day, kind: 'lend', amount: 4000 }];
+  const accounts = [{ account_id: 'a1', name: 'Yaw' }];
+  const onScreen = openBalances(entries, accounts, day);
+  assert.equal(onScreen.length, 1, 'no second save to see it');
+  assert.equal(Object.values(counted).reduce((a, b) => a + b, 0)
+    + onScreen.reduce((t, p) => t + p.net, 0), 134000, 'and the total has moved');
+
+  /* until he signs again, what was signed is untouched */
+  assert.equal(photograph.realCapital, 130000, 'the photograph does not move on its own');
+
+  /* one press: the four figures and the people together */
+  const signedAgain = dayReport({
+    day: { date: day, closing: { ...counted, debts: onScreen.map((p) => ({ name: p.name, net: p.net })) } },
+    txs: [],
+  });
+  assert.equal(signedAgain.realCapital, 134000);
+});
