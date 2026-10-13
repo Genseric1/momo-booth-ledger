@@ -24,11 +24,19 @@ const PERIODS = [
 
 export function statsScreen(ctx) {
   const st = ctx.stats || (ctx.stats = { measure: 'volume', period: 'week', network: null });
-  const measure = MEASURES.find((m) => m.id === st.measure);
-  const period = PERIODS.find((p) => p.id === st.period);
   const out = el('div.sheetview');
 
   const render = () => {
+    /* Read on every draw, never once before the first.
+
+       These two used to be resolved above, outside the function that draws
+       the page. A button set st.period and called render — and render went on
+       using the period it had closed over at the first draw. The highlight
+       moved under the finger and not one figure on the page changed, whatever
+       was pressed. */
+    const measure = MEASURES.find((m) => m.id === st.measure);
+    const period = PERIODS.find((p) => p.id === st.period);
+
     const series = build(st, period);
     const previous = build(st, period, true);
     const total = measure.id === 'capital' ? (series.at(-1)?.value ?? 0) : sum(series, (p) => p.value);
