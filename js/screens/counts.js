@@ -1,46 +1,61 @@
 /* ═══════════════ MORNING AND EVENING COUNT ═══════════════
-   Four numbers in the morning, four at night. At night the page says in one
-   sentence whether it falls right, and never decides for the agent whether a
-   difference is a mistake or a fee they charged on top.                      */
+   Four figures and a list of people, twice a day. Each count is a sheet of its
+   own, the way the two halves of a page in the book are their own.
 
-import { el, toast, fill, amountInput, confirmSheet } from '../ui.js';
-import { WALLETS, WALLET_LABEL, money, dayLabel, addDays } from '../util.js';
-import { openBalances } from '../calc.js';
+   A count holds its own people. Not a view onto a running list of debts — its
+   own, written on it and signed with it. That is the whole of the booth's
+   rule, and the one thing a shared list could never give: what is written or
+   removed on the evening cannot reach the morning it followed, and what is
+   written tomorrow cannot reach either of them.
+
+   It was a view onto a running list for a while, and every coupling the booth
+   complained about followed from that: the morning and the evening of one day
+   showing the same names, a debt settled in November emptying an October
+   count, a line deleted today vanishing from every day behind it. The
+   registers stayed right throughout, because a register has always read the
+   counts themselves.                                                         */
+
+import { el, toast, fill, sheet, amountInput, confirmSheet, chipRow } from '../ui.js';
+import { WALLETS, WALLET_LABEL, money, dayLabel, addDays, foldName } from '../util.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import { reportFor } from './page.js';
-import { entrySheet, personSheet } from './debts.js';
 
-/* Who still owes, and who is still owed, as things stand on that day. A debt is
-   part of the capital, so this is where it belongs — beside the wallets that
-   were counted, not among the lines of the page. */
-const owing = (upToDay) =>
-  openBalances(store.state.debtEntries, store.state.debtAccounts, upToDay);
-
-/* The sheet of the day: the four wallets to fill in, then every person who
-   still owes or is still owed, already written down, and the total underneath.
-   The people are part of the capital — leaving them out would make the total
-   disagree with the lines above it. */
 const sumOf = (o) => WALLETS.reduce((t, w) => t + (Number(o?.[w]) || 0), 0);
+const netOf = (people) => people.reduce((t, p) => t + (Number(p.net) || 0), 0);
 
-/* What a saved point carries, or nothing if it has never been saved. */
-const frozen = (snap) => (Array.isArray(snap?.debts) ? snap.debts : null);
-const netOf = (people) => people.reduce((t, p) => t + p.net, 0);
+/* The people a saved count carries, copied so that editing the sheet cannot
+   reach back into what was signed. */
+const carried = (snap) => (Array.isArray(snap?.debts) ? snap.debts.map((p) => ({ ...p })) : null);
 
-function countSheet(vals, people, { ctx = null } = {}) {
-  const open = ctx && sync.canWrite() ? (p) => () => personSheet(ctx, p) : () => null;
-  const debts = netOf(people);
+/* A sheet that has never been signed opens on the one before it — last night's
+   people for a morning, this morning's for an evening — already written, so
+   the booth adjusts instead of remembering. From that moment it is its own. */
+function startingPeople(date, which) {
+  const day = store.getDay(date);
+  const mine = carried(which === 'opening' ? day?.opening : day?.closing);
+  if (mine) return mine;
+  if (which === 'closing') {
+    const morning = carried(day?.opening);
+    if (morning) return morning;
+  }
+  return carried(store.getDay(addDays(date, -1))?.closing) || [];
+}
+
+/* ── the sheet ─────────────────────────────────────────────────────────── */
+
+function countSheet(vals, people, { onEdit = null } = {}) {
   const total = el('div.v.num');
   const waiting = el('small');
 
   /* A sum that leaves out the wallets is not a total. The four fields start
-     empty on purpose — the evening is counted, not copied — and while they
-     are, adding them to the debts gave a figure that looked like the booth's
-     worth and was only what people owed: 40,000 under four wallets holding
-     two hundred thousand. It says nothing at all until it can say the truth. */
+     empty on purpose — a count is counted, not copied — and while they are,
+     adding them to the people gave a figure that looked like the booth's
+     worth and was only what people owed. It says nothing at all until it can
+     say the truth. */
   const retotal = () => {
     const missing = WALLETS.filter((w) => vals[w] === '' || vals[w] == null);
-    total.textContent = missing.length ? '—' : money(sumOf(vals) + debts, { dp: 0 });
+    total.textContent = missing.length ? '—' : money(sumOf(vals) + netOf(people), { dp: 0 });
     waiting.textContent = missing.length
       ? `still to count: ${missing.map((w) => (w === 'CASH' ? 'cash' : WALLET_LABEL[w])).join(', ')}`
       : '';
@@ -54,23 +69,99 @@ function countSheet(vals, people, { ctx = null } = {}) {
   retotal();
   return el('div.countsheet',
     ...rows,
-    /* A name here is the debt itself: tapping it is how it is paid back,
-       corrected or put together with the same person spelled another way. */
-    ...people.map((p) => el(`${open(p) ? 'button' : 'div'}.countrow.owed`, { onclick: open(p) },
+    ...people.map((p, i) => el(`${onEdit ? 'button' : 'div'}.countrow.owed`,
+      { onclick: onEdit ? () => onEdit(i) : null },
       el('label', { text: p.name }, el('small', { text: p.net > 0 ? 'owes us' : 'we owe' })),
       el(`div.v.num.${p.net > 0 ? 'pos' : 'neg'}`, { text: money(p.net, { sign: p.net < 0, dp: 0 }) }))),
     el('div.countrow.total', el('label', { text: 'TOTAL' }, waiting), total));
 }
 
-/* The two buttons that write a debt. They sit under the count because that is
-   where a debt is a figure in the capital rather than a line at the counter:
-   written here, beside the wallets it moves. */
-function debtButtons(ctx) {
+/* ── writing a person onto the sheet ───────────────────────────────────── */
+
+/* The people already on the sheet come first and a name is typed only for
+   somebody new, so one person cannot become two over a spelling. And a name
+   that folds onto one already there joins it rather than sitting beside it. */
+function addPerson(people, direction, done) {
+  const st = { name: '', amount: '', fresh: !people.length };
+  const title = direction > 0 ? 'Someone owes us' : 'We owe someone';
+
+  sheet(title, ({ body, close }) => {
+    const render = () => fill(body,
+      el('div.field',
+        el('label', { text: 'Who' }),
+        people.length ? el('div.pick', people.map((p) =>
+          el(`button${foldName(st.name) === foldName(p.name) ? '.on' : ''}`, {
+            text: p.name, onclick: () => { st.name = p.name; st.fresh = false; render(); },
+          }))) : null,
+        st.fresh
+          ? el('input', { value: st.name, placeholder: 'name', autocomplete: 'off',
+              style: { marginTop: '8px' }, oninput: (e) => { st.name = e.target.value; } })
+          : el('button.big.quiet', { text: 'Someone new', style: { marginTop: '8px' },
+              onclick: () => { st.fresh = true; st.name = ''; render(); } })),
+      el('div.field',
+        el('label', { text: 'How much' }),
+        amountInput({ value: st.amount, oninput: (v) => { st.amount = v; } })),
+      el('p.note', { text: direction > 0
+        ? 'Written down as owed to the booth. Nothing is taken out of MTN, Telecel, AT or the cash box.'
+        : 'Written down as owed by the booth. Nothing is added to MTN, Telecel, AT or the cash box.' }),
+      el('button.big', { text: 'Add', style: { marginTop: '10px' }, onclick: () => {
+        const name = st.name.trim();
+        const value = Number(st.amount);
+        if (!name) return toast('Who?', { error: true });
+        if (!(value > 0)) return toast('How much?', { error: true });
+
+        const found = people.findIndex((p) => foldName(p.name) === foldName(name));
+        if (found >= 0) people[found].net += direction * value;
+        else people.push({ name, net: direction * value });
+        close();
+        done();
+      } }));
+    render();
+    return [];
+  });
+}
+
+/* Correcting or removing one, on this sheet and nowhere else. */
+function editPerson(people, i, done) {
+  const p = people[i];
+  const st = { amount: String(Math.abs(p.net)), owed: p.net > 0 };
+
+  sheet(p.name, ({ body, close }) => {
+    const render = () => fill(body,
+      el('div.field',
+        el('label', { text: 'Which way' }),
+        chipRow([{ value: 'owed', label: 'owes us' }, { value: 'owe', label: 'we owe' }],
+          st.owed ? 'owed' : 'owe', (v) => { st.owed = v === 'owed'; render(); })),
+      el('div.field',
+        el('label', { text: 'How much' }),
+        amountInput({ value: st.amount, oninput: (v) => { st.amount = v; } })),
+      el('button.big', { text: 'Save', style: { marginTop: '10px' }, onclick: () => {
+        const value = Number(st.amount);
+        if (!(value > 0)) return toast('How much?', { error: true });
+        people[i] = { ...p, net: (st.owed ? 1 : -1) * value };
+        close();
+        done();
+      } }),
+      el('button.big.warn', { text: 'Remove from this count', style: { marginTop: '8px' },
+        onclick: async () => {
+          if (!await confirmSheet('Remove from this count',
+            `${p.name} leaves this count only. Every other count keeps what it was signed with.`,
+            { danger: true, okLabel: 'Remove' })) return;
+          people.splice(i, 1);
+          close();
+          done();
+        } }));
+    render();
+    return [];
+  });
+}
+
+function debtButtons(people, done) {
   if (!sync.canWrite()) return null;
   return el('div', { style: { marginTop: '16px' } },
-    el('button.big.quiet', { text: 'Someone owes us', onclick: () => entrySheet(ctx, 'owed_to_us') }),
+    el('button.big.quiet', { text: 'Someone owes us', onclick: () => addPerson(people, 1, done) }),
     el('button.big.quiet', { text: 'We owe someone', style: { marginTop: '8px' },
-      onclick: () => entrySheet(ctx, 'we_owe') }));
+      onclick: () => addPerson(people, -1, done) }));
 }
 
 /* Four wallets at nothing is a booth with nothing in it. It happens by saving
@@ -90,126 +181,86 @@ function readOnly(field) {
   return field;
 }
 
+/* ── the two counts ────────────────────────────────────────────────────── */
+
 export function morningScreen(ctx) {
   const rep = reportFor(ctx.date);
   const prev = reportFor(addDays(ctx.date, -1));
   const vals = { ...(rep.hasOpening ? rep.opening : {}) };
-
-  /* The morning is before the first customer, so the debts that belong in it
-     are the ones carried over from yesterday — never the ones made during the
-     day that has not started yet.
-
-     It used the day itself, and a debt written at eleven in the morning was
-     counted in a total that claims to describe eight o'clock. The booth closed
-     one evening on 202,252 and opened the next morning on 257,000: the whole
-     difference was money lent out after that morning count was taken. The
-     button right below says yesterday's figure, and the total under it
-     disagreed with it on the same screen. */
-  /* One list and one total, and the list is what is owed as things stand.
-
-     A count is signed off by the button at the foot of the sheet: it says
-     "this is right, and this is the total", and it records the four figures
-     and the people together, in one go. For that signature to mean anything,
-     the sheet has to show what is being signed — so it shows the present, and
-     whatever Kojo writes or removes is there the moment he writes or removes
-     it.
-
-     It used to show the photograph instead, as soon as one had been taken.
-     Writing a debt then changed nothing on screen until the sheet was saved a
-     second time, which from the counter is indistinguishable from the app
-     having lost it. The photograph is what the register, the menu and the
-     days gone by read back; it is not what the hand filling in the sheet
-     should be looking at. */
-  const live = owing(ctx.date);
-  const kept = frozen(store.getDay(ctx.date)?.opening);
-  const moved = kept && Math.abs(netOf(kept) - netOf(live)) > 0.004;
-
-  const sheet = countSheet(vals, live, { ctx });
-  if (!sync.canWrite()) readOnly(sheet);
-
-  return el('div.sheetview',
-    el('h2', { text: `Morning — ${dayLabel(ctx.date, { weekday: false })}` }),
-    el('p.lead', { text: 'What is really in each wallet and in the box, before the first customer.' }),
-    prev.hasClosing ? el('button.big.quiet', {
-      text: `Take yesterday's evening count (${money(prev.realCapital, { dp: 0 })})`,
-      style: { marginBottom: '18px' },
-      onclick: () => {
-        for (const w of WALLETS) {
-          const input = sheet.querySelector(`#count-${w}`);
-          input.value = money(prev.real[w], { dp: 0 });
-          vals[w] = String(prev.real[w]);
-          input.dispatchEvent(new Event('input'));
-        }
-        toast('Copied — check it before saving');
-      },
-    }) : null,
-    sheet,
-    moved ? el('p.note', { style: { marginTop: '10px' }, text:
-      `This count was saved with ${money(netOf(kept), { dp: 0 })} of debts. What is owed now reads ${money(netOf(live), { dp: 0 })}. Save again to take the new figure in.` }) : null,
-    debtButtons(ctx),
-    !sync.canWrite() ? null : el('button.big', {
-      text: 'Save the morning count',
-      style: { marginTop: '18px' },
-      onclick: async () => {
-        if (countedNothing(vals) && !await reallyEmpty('Morning')) return;
-        await store.setOpening(ctx.date, vals, ctx.agent, live);
-        toast('Morning saved');
-        ctx.go('page');
-      },
-    }));
-}
-
-export function eveningScreen(ctx) {
-  const rep = reportFor(ctx.date);
-  const vals = { ...(rep.hasClosing ? rep.real : {}) };
+  const people = startingPeople(ctx.date, 'opening');
   const out = el('div.sheetview');
 
   const render = () => {
-    const live = owing(ctx.date);
-    const kept = frozen(store.getDay(ctx.date)?.closing);
-    const moved = kept && Math.abs(netOf(kept) - netOf(live)) > 0.004;
-
-    /* No prediction under the figures. It was the opening plus the lines
-       written, and this booth tops up its float during the day without those
-       top-ups being lines, so it read a negative MTN float and set Kojo
-       against a number that could not be right. He counts what is there. */
-    const sheet = countSheet(vals, live, { ctx });
-    if (!sync.canWrite()) readOnly(sheet);
+    const sheetEl = countSheet(vals, people,
+      { onEdit: sync.canWrite() ? (i) => editPerson(people, i, render) : null });
+    if (!sync.canWrite()) readOnly(sheetEl);
 
     fill(out,
-      el('h2', { text: `Evening — ${dayLabel(ctx.date, { weekday: false })}` }),
-      el('p.lead', { text: 'Count for real. This is the number that matters.' }),
-      sheet,
-      moved ? el('p.note', { style: { marginTop: '10px' }, text:
-        `This count was saved with ${money(netOf(kept), { dp: 0 })} of debts. What is owed now reads ${money(netOf(live), { dp: 0 })}. Save again to take the new figure in.` }) : null,
-      debtButtons(ctx),
-      !sync.canWrite() ? null : el('button.big', {
-        text: 'Save the evening count',
-        onclick: async () => {
-          if (countedNothing(vals) && !await reallyEmpty('Evening')) return;
-          await store.setClosing(ctx.date, vals, null, ctx.agent, live);
-          toast('Evening saved');
-          ctx.refresh();
+      el('h2', { text: `Morning — ${dayLabel(ctx.date, { weekday: false })}` }),
+      el('p.lead', { text: 'What is really in each wallet and in the box, before the first customer.' }),
+      prev.hasClosing ? el('button.big.quiet', {
+        text: `Take yesterday's evening count (${money(prev.realCapital, { dp: 0 })})`,
+        style: { marginBottom: '18px' },
+        onclick: () => {
+          for (const w of WALLETS) {
+            const input = sheetEl.querySelector(`#count-${w}`);
+            input.value = money(prev.real[w], { dp: 0 });
+            vals[w] = String(prev.real[w]);
+            input.dispatchEvent(new Event('input'));
+          }
+          toast('Copied — check it before saving');
         },
-      }),
-      rep.hasClosing ? verdict(rep, ctx) : null);
+      }) : null,
+      sheetEl,
+      debtButtons(people, render),
+      !sync.canWrite() ? null : el('button.big', {
+        text: 'Save the morning count',
+        style: { marginTop: '18px' },
+        onclick: async () => {
+          if (countedNothing(vals) && !await reallyEmpty('Morning')) return;
+          await store.setOpening(ctx.date, vals, ctx.agent, people);
+          toast('Morning saved');
+          ctx.go('page');
+        },
+      }));
   };
   render();
   return out;
 }
 
-/* One sentence first, the four numbers after — not a table to decode. */
-/* After the count is saved: close the day, or reopen it.
+export function eveningScreen(ctx) {
+  const rep = reportFor(ctx.date);
+  const vals = { ...(rep.hasClosing ? rep.real : {}) };
+  const people = startingPeople(ctx.date, 'closing');
+  const out = el('div.sheetview');
 
-   What used to stand here was a verdict — "it falls right", or how much was
-   missing, with the four wallets set against what the page predicted. The
-   booth asked for it to go, and it was right to: the prediction is opening
-   plus the lines written, and this booth tops up its float during the day
-   without those top-ups being lines. So the page expected a negative MTN
-   float and announced tens of thousands missing, every evening, from
-   arithmetic that could not be right. A figure nobody can act on is worse
-   than no figure. */
-function verdict(rep, ctx) {
+  const render = () => {
+    const sheetEl = countSheet(vals, people,
+      { onEdit: sync.canWrite() ? (i) => editPerson(people, i, render) : null });
+    if (!sync.canWrite()) readOnly(sheetEl);
+
+    fill(out,
+      el('h2', { text: `Evening — ${dayLabel(ctx.date, { weekday: false })}` }),
+      el('p.lead', { text: 'Count for real. This is the number that matters.' }),
+      sheetEl,
+      debtButtons(people, render),
+      !sync.canWrite() ? null : el('button.big', {
+        text: 'Save the evening count',
+        onclick: async () => {
+          if (countedNothing(vals) && !await reallyEmpty('Evening')) return;
+          await store.setClosing(ctx.date, vals, null, ctx.agent, people);
+          toast('Evening saved');
+          ctx.refresh();
+        },
+      }),
+      rep.hasClosing ? dayButtons(rep, ctx) : null);
+  };
+  render();
+  return out;
+}
+
+/* After the count is saved: close the day, or reopen it. */
+function dayButtons(rep, ctx) {
   return el('div', { style: { marginTop: '26px' } },
     !sync.canWrite() ? null
       : rep.closed && !sync.canReopenDay()

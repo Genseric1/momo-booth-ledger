@@ -199,3 +199,39 @@ test('what is written on a count is on it before it is signed', async () => {
   });
   assert.equal(signedAgain.realCapital, 134000);
 });
+
+/* Each count is a sheet of its own. What is written or removed on one cannot
+   reach the other count of the same day, nor any day behind it. */
+test('a count holds its own people, and nothing else holds them for it', async () => {
+  const { dayReport } = await import('../js/calc.js');
+  const wallets = { MTN: 10000, TELECEL: 10000, AT: 10000, CASH: 10000 };
+
+  const monday = {
+    date: '2026-10-12',
+    opening: { ...wallets, debts: [{ name: 'Yaw', net: 5000 }, { name: 'Ama', net: -2000 }] },
+    closing: { ...wallets, debts: [{ name: 'Yaw', net: 5000 }, { name: 'Ama', net: -2000 },
+                                   { name: 'Kofi', net: 30000 }] },
+  };
+  /* Tuesday was signed without Kofi, who was taken off that sheet */
+  const tuesday = {
+    date: '2026-10-13',
+    opening: { ...wallets, debts: [{ name: 'Yaw', net: 5000 }, { name: 'Ama', net: -2000 }] },
+    closing: { ...wallets, debts: [{ name: 'Yaw', net: 5000 }, { name: 'Ama', net: -2000 },
+                                   { name: 'Esi', net: 7500 }] },
+  };
+
+  const mon = dayReport({ day: monday, txs: [] });
+  const tue = dayReport({ day: tuesday, txs: [] });
+
+  /* the two halves of one day are not the same figure */
+  assert.equal(mon.openingDebts, 3000);
+  assert.equal(mon.closingDebts, 33000, 'Monday evening still carries Kofi');
+  assert.equal(tue.openingDebts, 3000, 'and Tuesday morning does not');
+  assert.equal(tue.closingDebts, 10500);
+
+  /* each capital is its own sheet's four figures plus its own sheet's people */
+  assert.equal(mon.openingCapital, 40000 + 3000);
+  assert.equal(mon.realCapital, 40000 + 33000);
+  assert.equal(tue.openingCapital, 40000 + 3000);
+  assert.equal(tue.realCapital, 40000 + 10500);
+});
