@@ -145,10 +145,49 @@ async function loadRole() {
 /* ── auth ── */
 /* Google sends the session back in the address bar; it is picked up here on the
    next load and the address is cleaned so it is not left lying around. */
+/* A link that arrived too late, or was opened twice, or that a mail server
+   followed before the person did. It used to leave the sign-in screen silent,
+   which reads as "nothing happened" when something very definitely did. */
+export function redirectError() {
+  const hash = location.hash.startsWith('#') ? new URLSearchParams(location.hash.slice(1)) : null;
+  const code = hash?.get('error_code') || hash?.get('error');
+  if (!code) return null;
+  history.replaceState(null, '', location.pathname + location.search);
+  if (/expired|invalid/i.test(code)) {
+    return 'That link has already been used or has run out. Ask for another one below — and open it as soon as it arrives.';
+  }
+  return (hash.get('error_description') || code).replace(/\+/g, ' ');
+}
+
+/* The booth asks for a link to be sent. The server answers the same way
+   whether the address is on its list or not, so nothing here can be used to
+   find out who holds an account. */
+export async function sendResetLink(email) {
+  const { url, key } = cfg();
+  if (!url || !key) throw new Error('This device has no booth server.');
+  const back = location.origin + location.pathname;
+  const res = await fetch(`${url}/auth/v1/recover?redirect_to=${encodeURIComponent(back)}`, {
+    method: 'POST',
+    headers: { apikey: key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (res.ok) return true;
+  const body = await readBody(res).catch(() => null);
+  const said = body?.msg || body?.error_description || body?.message || '';
+  const wait = said.match(/after (\d+) seconds?/i);
+  if (wait) throw new Error(`One at a time: wait ${wait[1]} seconds and ask once more.`);
+  throw new Error(said || 'Could not ask for a link. Check the network.');
+}
+
+/* True when this load came back from a reset link: the session is good, and
+   the one thing to do with it is set a password that is known again. */
+export const cameFromRecovery = () => status.recovery === true;
+
 export async function captureRedirectSession() {
   const hash = location.hash.startsWith('#') ? new URLSearchParams(location.hash.slice(1)) : null;
   const token = hash?.get('access_token');
   if (!token) return false;
+  const recovery = hash.get('type') === 'recovery';
   session = {
     access_token: token,
     refresh_token: hash.get('refresh_token'),
@@ -170,6 +209,7 @@ export async function captureRedirectSession() {
   await DB.setMeta('session', session);
   history.replaceState(null, '', location.pathname + location.search);
   status.signedIn = true;
+  status.recovery = recovery;
   status.email = session.user?.email || null;
   await loadRole();
   emit();

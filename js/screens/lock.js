@@ -6,7 +6,7 @@
    The PIN this app used to ask for is gone: a device that still carries one
    drops it quietly the next time the page opens.                            */
 
-import { el } from '../ui.js';
+import { el, sheet } from '../ui.js';
 import * as DB from '../db.js';
 import * as sync from '../sync.js';
 import { needsAccount, CONFIG } from '../config.js';
@@ -36,7 +36,7 @@ export function lockScreen(root) {
 
 async function accountDoor(root, resolve) {
   if (!needsAccount()) return opened(resolve);
-  if (!sync.hasSession()) return renderSignIn(root, resolve);
+  if (!sync.hasSession()) return renderSignIn(root, resolve, sync.redirectError());
   const check = await sync.ensureMembership();
   if (check.ok) return opened(resolve);
   return renderSignIn(root, resolve,
@@ -100,7 +100,28 @@ function renderSignIn(root, resolve, firstError = null) {
             sync.googleSignIn();
           } })
       : null,
+    el('button.linkish', { text: 'I have forgotten my password', onclick: () => forgot() }),
     el('p.note', { style: { textAlign: 'center' },
       text: 'Access is by account, and this device stays signed in afterwards.' }));
+
+  /* A password nobody else can read is a password that can be lost, so losing
+     it has to be an ordinary thing to do — not a trip to a dashboard that
+     only one person in the booth can even open. */
+  async function forgot() {
+    if (!navigator.onLine) return render('You need the network to ask for a link.');
+    if (!email) return render('Write your email above first, then ask again.');
+    try {
+      await sync.sendResetLink(email);
+      render();
+      sheet('Check that address', ({ close }) => [
+        el('p.lead', { text: `If ${email} has an account here, a link is on its way to it.` }),
+        el('p.note', { text: 'Open it as soon as it arrives: it works once, it runs out quickly, and asking for another cancels the one before.' }),
+        el('p.note', { text: 'It brings you back here already signed in, and the app will take you straight to setting a new password.' }),
+        el('button.big', { text: 'Done', onclick: () => close() }),
+      ]);
+    } catch (e) {
+      render(e.message);
+    }
+  }
   render();
 }

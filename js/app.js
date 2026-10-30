@@ -12,7 +12,7 @@ import { morningScreen, eveningScreen } from './screens/counts.js';
 import { menuScreen } from './screens/menu.js';
 import { statsScreen } from './screens/statistics.js';
 import { exportScreen, initialExportState } from './screens/exportpdf.js';
-import { settingsScreen } from './screens/settings.js';
+import { settingsScreen, changePasswordSheet } from './screens/settings.js';
 import { searchScreen } from './screens/search.js';
 import { CONFIG } from './config.js';
 import { openCalendar, closeCalendar } from './screens/calendar.js';
@@ -175,6 +175,14 @@ async function boot() {
   sync.startAutoSync();
   render();
   sync.sync();
+
+  /* Arrived from a reset link: the session is good and the password is still
+     the one that was forgotten. Nobody should have to go looking for where to
+     change it. */
+  if (sync.cameFromRecovery()) {
+    toast('Signed in from the link — set a new password now');
+    changePasswordSheet(ctx);
+  }
 
   let shownToday = today();
   setInterval(() => {

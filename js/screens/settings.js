@@ -304,7 +304,7 @@ function signInSheet(ctx) {
   ]);
 }
 
-function changePasswordSheet(ctx) {
+export function changePasswordSheet(ctx) {
   let pwd = '', again = '', busy = false;
   sheet('Change my password', ({ body, close }) => {
     const render = (error = null) => fill(body,
