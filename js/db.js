@@ -118,6 +118,24 @@ export async function mergeRemote(store, rows) {
   return added;
 }
 
+/* Rows coming back from a backup file. What is already here is left alone —
+   a row never changes once it exists — and what is missing is put back marked
+   to be sent, so a server that was emptied fills again on the next sync. A
+   second restore of the same file therefore does nothing at all. */
+export async function restore(store, rows) {
+  await open();
+  if (!rows.length) return 0;
+  const { t, done } = tx([store], 'readwrite');
+  const os = t.objectStore(store);
+  let added = 0;
+  for (const r of rows) {
+    const req = os.get(r.vid);
+    req.onsuccess = () => { if (!req.result) { os.put({ ...r, pending: 1 }); added++; } };
+  }
+  await done;
+  return added;
+}
+
 export async function getMeta(k, fallback = null) {
   await open();
   const { t } = tx(['meta'], 'readonly');

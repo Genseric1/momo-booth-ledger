@@ -5,6 +5,7 @@ import { dayKey } from '../util.js';
 import * as store from '../store.js';
 import * as sync from '../sync.js';
 import * as DB from '../db.js';
+import { makeBackup, readBackup, backupName } from '../backup.js';
 import { hasBackend, needsAccount, CONFIG, VERSION } from '../config.js';
 
 const NUMBER_MODES = [
@@ -29,6 +30,86 @@ function inventoryBlock() {
       })));
   }).catch(() => fill(box, el('p.note', { text: 'Could not read this device.' })));
   return box;
+}
+
+/* How long since the booth last took a copy. A backup nobody takes is not a
+   backup, so this is the one number that decides whether the rest was worth
+   building. */
+let lastBackup = null;
+DB.getMeta('lastBackup', null).then((v) => { lastBackup = v; });
+
+function backupAge() {
+  if (!lastBackup) {
+    return el('p.note', { style: { color: 'var(--red)' }, text: 'No backup has ever been taken from this device.' });
+  }
+  const days = Math.floor((Date.now() - new Date(lastBackup)) / 86400000);
+  const said = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+  return el('p.note', { style: days >= 10 ? { color: 'var(--red)' } : {},
+    text: `Last backup taken ${said}${days >= 10 ? ' — a week is the right rhythm.' : '.'}` });
+}
+
+async function downloadBackup(ctx) {
+  const booth = store.state.settings.exportPassword || '';
+  const st = { pass: booth };
+  sheet('Download a backup', ({ body, close }) => {
+    fill(body,
+      el('p.lead', { text: 'The file carries every customer number in full, so it is locked. Nothing in it can be read without this password — not in a Drive, not on a lost memory stick.' }),
+      el('div.field',
+        el('label', { text: 'Password for this file' }),
+        el('input', { type: 'text', value: st.pass, placeholder: 'choose a password',
+          oninput: (e) => { st.pass = e.target.value; } })),
+      el('p.note', { text: booth
+        ? 'This is the password the booth puts on its registers. Keep it the same and there is only one to remember.'
+        : 'Write it down somewhere other than the file itself. Lost, it cannot be recovered — that is what locked means.' }),
+      el('button.big', { text: 'Download', style: { marginTop: '10px' }, onclick: async () => {
+        if (!st.pass.trim()) return toast('A backup needs a password', { error: true });
+        try {
+          const html = await makeBackup(st.pass.trim());
+          const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = backupName(store.state.settings.boothName);
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 30000);
+          lastBackup = new Date().toISOString();
+          await DB.setMeta('lastBackup', lastBackup);
+          toast('Backup downloaded — put it in two places');
+          close(); ctx.refresh();
+        } catch (e) { toast(e.message, { error: true }); }
+      } }));
+    return [];
+  });
+}
+
+async function restoreBackup(ctx) {
+  const input = el('input', { type: 'file', accept: '.html,text/html', style: { display: 'none' } });
+  document.body.append(input);
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    input.remove();
+    if (!file) return;
+    const text = await file.text();
+    const st = { pass: '' };
+    sheet('Restore from a file', ({ body, close }) => {
+      fill(body,
+        el('p.lead', { text: `${file.name} — what is already here is left untouched. Only what is missing comes back, and it goes up to the booth on the next sync.` }),
+        el('div.field',
+          el('label', { text: 'Password of that file' }),
+          el('input', { type: 'password', value: '', oninput: (e) => { st.pass = e.target.value; } })),
+        el('button.big', { text: 'Restore', style: { marginTop: '10px' }, onclick: async () => {
+          try {
+            const data = await readBackup(text, st.pass);
+            let added = 0;
+            for (const name of DB.STORE_NAMES) added += await DB.restore(name, data.stores?.[name] || []);
+            await store.reload();
+            toast(added ? `${added} rows put back` : 'Nothing was missing');
+            close(); ctx.refresh();
+          } catch (e) { toast(e.message, { error: true }); }
+        } }));
+      return [];
+    });
+  };
+  input.click();
 }
 
 export function settingsScreen(ctx) {
@@ -148,6 +229,17 @@ export function settingsScreen(ctx) {
         el('div.r', { style: { marginTop: '10px' } },
           el('button.big.quiet', { text: 'Export backup', onclick: exportBackup }),
           el('button.big.quiet', { text: 'Import backup', onclick: () => importBackup(ctx) })),
+      ]),
+
+      card('Backup', [
+        el('p.lead', { text: 'One file carrying the whole register, locked. Open it on any computer with no internet and nothing installed, and it shows every day and everything that was ever done. The same file puts the register back if a server or a device has to be refilled.' }),
+        backupAge(),
+        el('button.big', { text: 'Download a backup', style: { marginTop: '12px' },
+          onclick: () => downloadBackup(ctx) }),
+        el('button.big.quiet', { text: 'Restore from a file', style: { marginTop: '8px' },
+          onclick: () => restoreBackup(ctx) }),
+        el('p.note', { style: { marginTop: '10px' }, text: 'Keep each one — they are dated and never replace each other, so a mistake made this week cannot reach the copy from last week. Put every file in two places of different kinds: this computer and a Drive, or a Drive and a memory stick.' }),
+        el('p.note', { text: 'Take it from a device with nothing left to send, or the file is behind too.' }),
       ]),
 
       card('This device', [
